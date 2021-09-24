@@ -218,7 +218,7 @@ def __main__(candname, datestring, ntint, nfint, start_offset, end_offset):
     tstart = Time(metadata['mjds'], format='mjd')
     try:
         declination = get_declination_mjd(tstart)
-    except ConnectionError:
+    except (ConnectionError, KeyError):
         declination = 54.58209895*u.deg
     deltat_ms = ntint*T3PARAMS['deltat_s']*1e3
     deltaf_MHz = T3PARAMS['deltaf_MHz']
