@@ -7,7 +7,7 @@ import matplotlib.pylab as plt
 import filplot_funcs
 
 if __name__=='__main__':
-#    /data/dsa110/T1/corr02/2021_9_1_18_33_28/fil_210902aabz/210902aabz_69.fil
+
     if len(sys.argv)!=6:
         print("Expected: datestr candname ibeam ibox dm")
         exit()
@@ -24,7 +24,7 @@ if __name__=='__main__':
     print(fn)
     fnout = fn.split('/')[-1]
     dataft, datadm, tsdm0, dms, datadm0 = filplot_funcs.proc_cand_fil(fn, dm, 1, snrheim=-1,
-                                               pre_rebin=1, nfreq_plot=64,
+                                               pre_rebin=1, nfreq_plot=1024,
                                                ndm=256, rficlean=True, norm=True)
 #    mm = np.std(dataft,1)
 #    dataft[mm>1.265] = 0.0
