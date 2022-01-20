@@ -28,28 +28,57 @@ def cb_func(dd):
         res = client.submit(task, trigger)
         tasks.append(res)
 
-# set watch
-wid = de.add_watch('/mon/corr/1/voltage', cb_func)
+def datestring_func():
+    def a(event):
+        global datestring
+        datestring = event
+    return a
 
-# clean up existing triggers
+def docopy_func():
+    def a(event):
+        global docopy
+        global candnames
+        if event=='True':
+            docopy=True
+        if event=='False':
+            docopy=False
+            candnames = []
+    return a
+
+
+# add callbacks from etcd                                                                                
+docopy = de.get_dict('/cmd/corr/docopy') == 'True'
 datestring = de.get_dict('/cnf/datestring')
-trig_jsons = sorted(glob.glob('/data/dsa110/T2/'+datestring+'/cluster_output*.json'))
-for fl in trig_jsons:
-    f = open(fl)
-    d = json.load(f)
-    trigname = list(d.keys())[0]
-    if not os.path.exists('/home/ubuntu/data/T3/'+trigname+'.png'):
-        res = client.submit(task_nowait, d)
-        tasks.append(res)
-    
+de.add_watch('/cnf/datestring', datestring_func())
+de.add_watch('/cmd/corr/docopy', docopy_func())
+
+# work through candidates as they are written to disk
+candnames = []
 
 while True:
+
+    trig_jsons = sorted(glob.glob('/data/dsa110/T2/'+datestring+'/cluster_output*.json'))
+    for fl in trig_jsons:
+        f = open(fl)
+        d = json.load(f)
+        trigname = list(d.keys())[0]
+
+        if docopy is True:
+            if trigname not in candnames:
+                if len(tasks)<8:
+                    candnames.append(trigname)        
+                    if not os.path.exists('/home/ubuntu/data/T3/'+trigname+'.png'):
+                        res = client.submit(task_nowait, d)
+                        tasks.append(res)
+    
     try:
         print(f'{len(tasks)} tasks in queue')
+        if len(tasks)==0:
+            candnames = []
         for future in tasks:
-            print(future)
             if future.done():
-                print(future.result())
+                dd = future.result()
+                print(f'\tTask complete for {dd["trigname"]}')
                 tasks.remove(future)
 
         de.put_dict('/mon/service/T3manager',{'cadence': 5, 'time': dsa_functions36.current_mjd()})

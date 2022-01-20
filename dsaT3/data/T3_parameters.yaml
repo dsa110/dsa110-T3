@@ -1,6 +1,6 @@
 T3corr:
     msdir: '/media/ubuntu/data/dsa110/imaging/'
-    archivedir: '/media/ubuntu/data/dsa110/T3/'
+    archivedir: '/media/ubuntu/ssd/T3/'
     corrdir: '/media/ubuntu/ssd/data/'
     T3dir: '/home/ubuntu/data/T3/'
     npol: 4

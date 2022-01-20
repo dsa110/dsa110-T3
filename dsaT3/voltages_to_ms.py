@@ -15,7 +15,8 @@ import yaml
 from pkg_resources import resource_filename
 from astropy.time import Time
 import astropy.units as u
-from dsaT3.utils import get_declination_mjd, rsync_file
+from dsautils.coordinates import get_declination
+from dsaT3.utils import rsync_file
 from dsaT3.T3imaging import generate_T3_uvh5
 from dsacalib.ms_io import uvh5_to_ms
 from dsautils import cnf
@@ -217,7 +218,7 @@ def __main__(candname, datestring, ntint, nfint, start_offset, end_offset):
         metadata = json.load(jsonf)
     tstart = Time(metadata['mjds'], format='mjd')
     try:
-        declination = get_declination_mjd(tstart)
+        declination = get_declination(tstart)
     except ConnectionError:
         declination = 54.58209895*u.deg
     deltat_ms = ntint*T3PARAMS['deltat_s']*1e3

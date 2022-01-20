@@ -28,6 +28,7 @@ setup(name='dsa110-T3',
                         'slack',
                         'slackclient',
                         'tensorflow==2.5.0',
+                        'psrqpy'
       ],
       dependency_links = [
           "https://github.com/dsa110/dsa110-antpos/tarball/master#egg=dsa110-antpos",
