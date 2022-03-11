@@ -11,6 +11,7 @@ from scipy import stats
 
 import numpy as np
 import matplotlib as mpl
+mpl.rcdefaults()
 import h5py
 #mpl.use('Agg') # hack
 import matplotlib.pyplot as plt 
@@ -18,7 +19,7 @@ import json
 import glob
 import optparse
 import pandas
-from mpl_toolkits.axes_grid.inset_locator import inset_axes
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 import multiprocessing
 from joblib import Parallel, delayed
@@ -29,6 +30,9 @@ import slack
 from astropy.time import Time
 #from dsautils.coordinates import get_pointing, get_galcoord
 import dsautils.coordinates
+import dsautils.dsa_store as ds
+d = ds.DsaStore()
+
 
 ncpu = multiprocessing.cpu_count() - 1 
 
@@ -82,7 +86,7 @@ def plotfour(dataft, datats, datadmt,
              datadm0=None, suptitle='', heimsnr=-1,
              ibox=1, ibeam=-1, prob=-1,
              showplot=True,multibeam_dm0ts=None,
-             fnT2clust=None,imjd=0.0):
+             fnT2clust=None,imjd=0.0,fake=False):
     """ Plot a trigger's dynamics spectrum, 
         dm/time array, pulse profile, 
         multibeam info (optional), and zerodm (optional)
@@ -123,39 +127,45 @@ def plotfour(dataft, datats, datadmt,
     freqmin = freqmax + dataft.header['nchans']*dataft.header['foff']
     freqs = np.linspace(freqmin, freqmax, nfreq)
     tarr = np.linspace(tmin, tmax, ntime)
-    fig = plt.figure(figsize=(8,10))
+#    fig = plt.figure(figsize=(8,10))
+    fig, axs = plt.subplots(3, 2, figsize=(8,10), constrained_layout=True)
 
-    plt.subplot(321)
+    if fake:
+        fig.patch.set_facecolor('red')
+        fig.patch.set_alpha(0.5)
+
     extentft=[tmin,tmax,freqmin,freqmax]
-    plt.imshow(dataft, aspect='auto',extent=extentft, interpolation='nearest')
+    axs[0][0].imshow(dataft, aspect='auto',extent=extentft, interpolation='nearest')
     DM0_delays = xminplot + dm * 4.15E6 * (freqmin**-2 - freqs**-2)
-    plt.plot(DM0_delays, freqs, c='r', lw='2', alpha=0.35)
-    plt.xlim(xminplot,xmaxplot)
-    plt.xlabel('Time (ms)')
-    plt.ylabel('Freq (MHz)')
+    axs[0][0].plot(DM0_delays, freqs, c='r', lw='2', alpha=0.35)
+    axs[0][0].set_xlim(xminplot,xmaxplot)
+    axs[0][0].set_xlabel('Time (ms)')
+    axs[0][0].set_ylabel('Freq (MHz)')
     if prob!=-1:
-        plt.text(xminplot+50*ibox/16.,0.5*(freqmax+freqmin),
-                 "Prob=%0.2f" % prob, color='white', fontweight='bold')
+        axs[0][0].text(xminplot+50*ibox/16.,0.5*(freqmax+freqmin),
+                       "Prob=%0.2f" % prob, color='white', fontweight='bold')
         classification_dict['prob'] = prob
-    plt.subplot(322)
-    extentdm=[tmin, tmax, dm_min, dm_max]
-    plt.imshow(datadmt[::-1], aspect='auto',extent=extentdm)
-    plt.xlim(xminplot,xmaxplot)
-    plt.xlabel('Time (ms)')
-    plt.ylabel(r'DM (pc cm$^{-3}$)')
 
-    plt.subplot(323)
-    plt.plot(tarr, datats)
-    plt.grid('on', alpha=0.25)
-    plt.xlabel('Time (ms)')
-    plt.ylabel(r'Power ($\sigma$)')
-    plt.xlim(xminplot,xmaxplot)
-    plt.text(0.51*(xminplot+xmaxplot), 0.5*(max(datats)+np.median(datats)), 
+#    plt.subplot(322)
+    extentdm=[tmin, tmax, dm_min, dm_max]
+    axs[0][1].imshow(datadmt[::-1], aspect='auto',extent=extentdm)
+    axs[0][1].set_xlim(xminplot,xmaxplot)
+    axs[0][1].set_xlabel('Time (ms)')
+    axs[0][1].set_ylabel(r'DM (pc cm$^{-3}$)')
+
+#    plt.subplot(323)
+    axs[1][0].plot(tarr, datats)
+    axs[1][0].grid('on', alpha=0.25)
+    axs[1][0].set_xlabel('Time (ms)')
+    axs[1][0].set_ylabel(r'Power ($\sigma$)')
+    axs[1][0].set_xlim(xminplot,xmaxplot)
+    axs[1][0].text(0.51*(xminplot+xmaxplot), 0.5*(max(datats)+np.median(datats)), 
             'Heimdall S/N : %0.1f\nHeimdall DM : %d\
             \nHeimdall ibox : %d\nibeam : %d' % (heimsnr,dm,ibox,ibeam), 
             fontsize=8, verticalalignment='center')
     
-    parent_axes=fig.add_subplot(324)
+#    parent_axes=fig.add_subplot(324)
+    parent_axes = axs[1][1]
     if beam_time_arr is None:
         plt.xticks([])
         plt.yticks([])
@@ -167,37 +177,39 @@ def plotfour(dataft, datats, datadmt,
         parent_axes.axvline(540, ymin=0, ymax=6, color='r', linestyle='--', alpha=0.55)
         parent_axes.axvline(460, ymin=0, ymax=6, color='r', linestyle='--', alpha=0.55)
         parent_axes.axhline(max(0,ibeam-1), xmin=0, xmax=100, color='r', linestyle='--', alpha=0.55)
-        parent_axes.axhline(ibeam+1, xmin=0, xmax=100, color='r', linestyle='--', alpha=0.55)
+        parent_axes.axhline(ibeam+3, xmin=0, xmax=100, color='r', linestyle='--', alpha=0.55)
         parent_axes.set_xlim(xminplot,xmaxplot)
         parent_axes.set_xlabel('Time (ms)')
         parent_axes.set_ylabel('Beam', fontsize=15)
         small_axes = inset_axes(parent_axes,
-                    width="25%", # width = 30% of parent_bbox
-                    height="25%", # height : 1 inch
+                                width="25%", # width = 30% of parent_bbox
+                                height="25%", # height : 1 inch
                                 loc=4)
-        small_axes.imshow(beam_time_arr[ibeam-4:ibeam+4][::-1], aspect='auto', extent=[tmin, tmax, ibeam-4, ibeam+4],
+        small_axes.imshow(beam_time_arr[::-1][ibeam-4:ibeam+4], aspect='auto', extent=[tmin, tmax, ibeam-4, ibeam+4],
                                             interpolation='nearest', cmap='afmhot')
         small_axes.set_xlim(400., 600.)
 
     if datadm0 is not None:
-        plt.subplot(325)
+#        plt.subplot(325)
         datadm0 -= np.median(datadm0.mean(0))
         datadm0_sigmas = datadm0.mean(0)/np.std(datadm0.mean(0)[-500:])
         snr_dm0ts_iBeam = np.max(datadm0_sigmas)
-        plt.plot(np.linspace(0, tmax, len(datadm0[0])), datadm0_sigmas, c='k')
+        axs[2][0].plot(np.linspace(0, tmax, len(datadm0[0])), datadm0_sigmas, c='k')
         classification_dict['snr_dm0_ibeam'] = snr_dm0ts_iBeam
         
         if multibeam_dm0ts is not None:
-            multibeam_dm0ts = multibeam_dm0ts/np.std(multibeam_dm0ts[multibeam_dm0ts!=multibeam_dm0ts.max()])
-            multibeam_dm0ts -= np.median(multibeam_dm0ts)
+#        if False:
+            multibeam_dm0ts -= np.median(multibeam_dm0ts)            
+#            multibeam_dm0ts = multibeam_dm0ts/np.std(multibeam_dm0ts[multibeam_dm0ts!=multibeam_dm0ts.max()])
+            multibeam_dm0ts = multibeam_dm0ts/np.std(multibeam_dm0ts[-500:])
             snr_dm0ts_allbeams = np.max(multibeam_dm0ts)
-            plt.plot(np.linspace(0, tmax, len(multibeam_dm0ts)), multibeam_dm0ts, color='C1', alpha=0.75)
-            plt.legend(['iBeam=%d'%ibeam, 'All beams'], loc=1, fontsize=10)
-            plt.ylabel(r'Power ($\sigma$)')
+            axs[2][0].plot(np.linspace(0, tmax, len(multibeam_dm0ts)), multibeam_dm0ts, color='C1', alpha=0.75)
+            axs[2][0].legend(['iBeam=%d'%ibeam, 'All beams'], loc=1, fontsize=10)
+            axs[2][0].set_ylabel(r'Power ($\sigma$)')
             classification_dict['snr_dm0_allbeam'] = snr_dm0ts_allbeams
         else:
-            plt.legend(['DM=0 Timestream'], loc=2, fontsize=10)
-        plt.xlabel('Time (ms)')
+            axs[2][0].legend(['DM=0 Timestream'], loc=2, fontsize=10)
+        axs[2][0].set_xlabel('Time (ms)')
         
 #        plt.subplot(326)
 #        plt.plot(np.linspace(freqmax,freqmin,datadm0.shape[0]), np.mean(datadm0,axis=-1), color='k')
@@ -206,47 +218,50 @@ def plotfour(dataft, datats, datadmt,
 #        plt.legend(['spectrum'], loc=2)
 #        plt.xlabel('freq [MHz]')
 
-        plt.subplot(326)
+#        plt.subplot(326)
         
         if fnT2clust is not None:
             T2object = pandas.read_csv(fnT2clust)
             ind = np.where(np.abs(86400*(imjd-T2object.mjds[:]))<30.0)[0]
             ttsec = (T2object.mjds.values-imjd)*86400
-            plt.scatter(ttsec[ind],
-                        T2object.ibeam[ind],
-                        c=T2object.dm[ind],
-                        s=2*T2object.snr[ind],
-                        cmap='RdBu_r',
-                        vmin=0,vmax=1200)
-            plt.colorbar(label=r'DM (pc cm$^{-3}$)')
-            plt.scatter(0, ibeam, s=100, marker='s',
+            mappable = axs[2][1].scatter(ttsec[ind],
+                                         T2object.ibeam[ind],
+                                         c=T2object.dm[ind],
+                                         s=2*T2object.snr[ind],
+                                         cmap='RdBu_r',
+                                         vmin=0,vmax=1200)
+            fig.colorbar(mappable, label=r'DM (pc cm$^{-3}$)', ax=axs[2][1])
+            axs[2][1].scatter(0, ibeam, s=100, marker='s',
                         facecolor='none', edgecolor='black')
-            plt.xlim(-10,10.)
-            plt.ylim(0,256)
-            plt.xlabel('Time (s)')
-            plt.ylabel('ibeam')
+            axs[2][1].set_xlim(-10,10.)
+            axs[2][1].set_ylim(0,256)
+            axs[2][1].set_xlabel('Time (s)')
+            axs[2][1].set_ylabel('ibeam')
 
-    print(classification_dict)
     not_real = False
 
     if multibeam_dm0ts is not None:
-        if classification_dict['snr_dm0_allbeam']>7.0:
-            if classification_dict['prob']<0.5:
-                not_real = True
+        if classification_dict['snr_dm0_allbeam']>7.5:
+            if classification_dict['snr_dm0_ibeam']>10.:
+                if classification_dict['prob']<0.25:
+                    not_real = True
 
-    if classification_dict['prob']<0.01:
-        not_real = True
+#    if classification_dict['prob']<0.01:
+#        not_real = True
 
     if not_real==True:
         suptitle += ' (Probably not real)'
 
-    plt.suptitle(suptitle, color='C1')
-    plt.tight_layout()
+    fig.suptitle(suptitle, color='C1')
+    if fake:
+        fig.suptitle('INJECTION')
+
     if figname_out is not None:
-        plt.savefig(figname_out)
+        fig.savefig(figname_out)
     if showplot:
-        plt.show()
-    plt.close(fig)
+        fig.show()
+#    plt.close(fig)
+
     return not_real
         
 def dm_transform(data, dm_max=20,
@@ -526,7 +541,8 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
              ndm=32, suptitle='', heimsnr=-1,
              ibeam=-1, rficlean=True, nfreq_plot=32, 
              classify=False, heim_raw_tres=1, 
-             showplot=True, save_data=False, candname=None, fnT2clust=None, imjd=0):
+             showplot=True, save_data=True, candname=None,
+             fnT2clust=None, imjd=0, fake=False):
     """ Vizualize FRB candidates on DSA-110
     """
 #    if type(multibeam)==list:
@@ -580,6 +596,7 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
         
         paramsdict = {'dm' : dm, 'ibox' : ibox, 'ibeam' : ibeam,
                       'snr' : heimsnr}
+        params = np.array([heimsnr, dm, ibox, ibeam])
         
         g = h5py.File(fnout,'w')
         g.create_dataset('data_freq_time',data=dataft)
@@ -588,7 +605,7 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
             g.create_dataset('data_beam_time',data=[])
         else:
             g.create_dataset('data_beam_time',data=beam_time_arr)
-        g.create_dataset('params',data=str(paramsdict))
+        g.create_dataset('params',data=params)
         g.close()
     
         
@@ -598,7 +615,8 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
                         suptitle=suptitle, heimsnr=heimsnr,
                         ibox=ibox, ibeam=ibeam, prob=prob,
                         showplot=showplot,
-                        multibeam_dm0ts=multibeam_dm0ts,fnT2clust=fnT2clust,imjd=imjd)
+                        multibeam_dm0ts=multibeam_dm0ts,fnT2clust=fnT2clust,imjd=imjd,
+                        fake=fake)
 
     return not_real,prob
     
@@ -607,7 +625,7 @@ def filplot_entry(datestr,trigger_dict,
                   toslack=True,classify=True,
                   rficlean=True,
                   ndm=32,ntime_plot=64,
-                  nfreq_plot=32,save_data=False,
+                  nfreq_plot=32,save_data=True,
                   fllisting=None):
 
     trigname = list(trigger_dict.keys())[0]
@@ -615,8 +633,38 @@ def filplot_entry(datestr,trigger_dict,
     ibox = trigger_dict[trigname]['ibox']
     ibeam = trigger_dict[trigname]['ibeam'] + 1
     timehr = trigger_dict[trigname]['mjds']
-    snr = trigger_dict[trigname]['snr']    
+    snr = trigger_dict[trigname]['snr']
 
+    inj_data = np.genfromtxt('/home/ubuntu/data/injections/injection_list.txt')
+    inj_data = d.get_dict('/mon/corr/injection')
+#    mjd_inj, ibeam_inj, dm_inj, snr_inj, width_inj, spec_ind, FRBno_inj = inj_data[:, 0],\
+#                                                                          inj_data[:, 1],\
+#                                                                          inj_data[:, 2],\
+#                                                                          inj_data[:, 3],\
+#                                                                          inj_data[:, 4],\
+#                                                                          inj_data[:, 5],\
+#                                                                          inj_data[:, 6]
+    mjd_inj, ibeam_inj, dm_inj, snr_inj, width_inj, spec_ind, FRBno_inj = inj_data['mjd'],\
+                                                                          inj_data['ibeam'],\
+                                                                          inj_data['dm'],\
+                                                                          inj_data['snr'],\
+                                                                          inj_data['width'],\
+                                                                          inj_data['spec_ind'],\
+                                                                          inj_data['frbno'],
+    
+    tdiff_min, tdiff_ind = 86400*np.min(np.abs(mjd_inj-timehr)), np.argmin(np.abs(mjd_inj-timehr))
+    # Check if any injected FRB is within 100 seconds,
+    # 25 DM units, and 2 ibeams. If so, label as fake.
+
+    if tdiff_min<100:
+        if np.abs(dm-dm_inj)<25.0:
+            if np.abs(ibeam-ibeam_inj)<2:
+                fake = True
+                print("This burst was injected")
+    else:
+        print("Not injected")
+        fake = False
+    
     fnT2clust = '/data/dsa110/T2/%s/cluster_output.csv'%datestr
     
     if fllisting is None:
@@ -671,10 +719,13 @@ def filplot_entry(datestr,trigger_dict,
                              classify=classify, showplot=showplot, 
                              multibeam=flist,
                              heim_raw_tres=1, save_data=save_data,
-                             candname=trigname, fnT2clust=fnT2clust, imjd=timehr)
-    print(not_real)
-    #if slack and not_real==False:
-    if toslack:
+                             candname=trigname, fnT2clust=fnT2clust, imjd=timehr,
+                             fake=fake)
+
+    if not_real==True:
+        print("Not real. Not sending to slack")
+
+    if toslack and not_real==False:
         print("Sending to slack")
         slack_file = '{0}/.config/slack_api'.format(
             os.path.expanduser("~")
