@@ -185,8 +185,10 @@ def plotfour(dataft, datats, datadmt,
                                 width="25%", # width = 30% of parent_bbox
                                 height="25%", # height : 1 inch
                                 loc=4)
-        small_axes.imshow(beam_time_arr[::-1][ibeam-4:ibeam+4], aspect='auto', extent=[tmin, tmax, ibeam-4, ibeam+4],
-                                            interpolation='nearest', cmap='afmhot')
+        small_axes.imshow(beam_time_arr[::-1][ibeam-4:ibeam+4],
+                          aspect='auto',
+                          extent=[tmin, tmax, ibeam-4, ibeam+4],
+                          interpolation='nearest', cmap='afmhot')
         small_axes.set_xlim(400., 600.)
 
     if datadm0 is not None:
@@ -210,16 +212,7 @@ def plotfour(dataft, datats, datadmt,
         else:
             axs[2][0].legend(['DM=0 Timestream'], loc=2, fontsize=10)
         axs[2][0].set_xlabel('Time (ms)')
-        
-#        plt.subplot(326)
-#        plt.plot(np.linspace(freqmax,freqmin,datadm0.shape[0]), np.mean(datadm0,axis=-1), color='k')
-
-#        plt.semilogy()
-#        plt.legend(['spectrum'], loc=2)
-#        plt.xlabel('freq [MHz]')
-
-#        plt.subplot(326)
-        
+                
         if fnT2clust is not None:
             T2object = pandas.read_csv(fnT2clust)
             ind = np.where(np.abs(86400*(imjd-T2object.mjds[:]))<30.0)[0]
@@ -246,8 +239,8 @@ def plotfour(dataft, datats, datadmt,
                 if classification_dict['prob']<0.25:
                     not_real = True
 
-#    if classification_dict['prob']<0.01:
-#        not_real = True
+    if classification_dict['prob']<0.01:
+        not_real = True
 
     if not_real==True:
         suptitle += ' (Probably not real)'
