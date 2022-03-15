@@ -37,9 +37,6 @@ d = ds.DsaStore()
 ncpu = multiprocessing.cpu_count() - 1 
 
 # Keras neural network model for Freq/Time array
-#MLMODELPATH='/home/user/connor/software/machine_learning/20190501freq_time.hdf5'
-#BASEDIR='/mnt/data/dsa110/'
-#webPLOTDIR=BASEDIR+'webPLOTS/'
 MLMODELPATH='/home/ubuntu/connor/MLmodel/20190501freq_time.hdf5'
 BASEDIR='/data/dsa110/'
 webPLOTDIR='/home/ubuntu/data/T3/'
@@ -253,7 +250,6 @@ def plotfour(dataft, datats, datadmt,
         fig.savefig(figname_out)
     if showplot:
         fig.show()
-#    plt.close(fig)
 
     return not_real
         
@@ -320,7 +316,6 @@ def proc_cand_fil(fnfil, dm, ibox, snrheim=-1,
     datadm0 = data.copy()
     
     if rficlean:
-#        print("Cleaning data perchannel")
         data = cleandata(data, clean_type='aladsa')
 
     tsdm0 = np.mean(data,axis=0)
@@ -423,7 +418,7 @@ def cleandata(data, threshold_time=3.25, threshold_frequency=2.75, bin_size=32,
             stdevt = np.std(dtmean_nobandpass)
             medt = np.median(dtmean_nobandpass)
             maskt = np.abs(dtmean_nobandpass - medt) > threshold_frequency*stdevt
-            data[maskt] = np.median(dtmean)#dtmean.reshape(-1, bin_size).mean(-1).repeat(bin_size)[maskt]
+            data[maskt] = np.median(dtmean)
 
     return data
 
