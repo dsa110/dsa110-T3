@@ -500,7 +500,6 @@ def classify_freqtime(fnmodel, dataft):
     """
     if type(fnmodel)==str:
         from keras.models import load_model
-        fnmodel=MLMODELPATH
         model = load_model(fnmodel)
     else:
         model = fnmodel
@@ -611,7 +610,7 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
 
 def filplot_entry(datestr,trigger_dict,
                   toslack=True,classify=True,
-                  rficlean=True,
+                  rficlean=False,
                   ndm=32,ntime_plot=64,
                   nfreq_plot=32,save_data=True,
                   fllisting=None):
@@ -683,7 +682,7 @@ def filplot_entry(datestr,trigger_dict,
     else:
         showplot=True
 
-    ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(obstime=Time(timehr, format='mjd'))
+    ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(ibeam, obstime=Time(timehr, format='mjd'))
     l, b = dsautils.coordinates.get_galcoord(ra_mjd.value, dec_mjd.value)
 #    ind_near = utils.match_pulsar(ra_mjd, dec_mjd, thresh_deg=3.5)
 
