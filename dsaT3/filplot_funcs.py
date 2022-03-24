@@ -695,6 +695,7 @@ def filplot_entry(datestr,trigger_dict,
     else:
         showplot=True
 
+    # TODO: Look up the pointing for the detection beam
     ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(obstime=Time(timehr, format='mjd'))
     l, b = dsautils.coordinates.get_galcoord(ra_mjd.value, dec_mjd.value)
 #    ind_near = utils.match_pulsar(ra_mjd, dec_mjd, thresh_deg=3.5)
