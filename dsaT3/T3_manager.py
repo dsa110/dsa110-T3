@@ -143,7 +143,7 @@ def run_nowait(a):
     
     # launch candplotter
     try:
-        output_dict['candplot'], output_dict['probability'] = filf.filplot_entry(datestring,a)
+        output_dict['candplot'], output_dict['probability'] = filf.filplot_entry(datestring,a,rficlean=False)
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
             output_dict['trigname'],
@@ -224,7 +224,7 @@ def run_copied(a):
 
     # launch candplotter
     try:
-        output_dict['candplot'] = filf.filplot_entry(datestring,a,fllisting=flist)
+        output_dict['candplot'] = filf.filplot_entry(datestring,a,fllisting=flist,rficlean=False)
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
             output_dict['trigname'],
