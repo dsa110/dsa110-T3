@@ -26,7 +26,7 @@ from joblib import Parallel, delayed
 #import filterbank
 from sigpyproc.Readers import FilReader
 import slack
-
+import astropy.units as u
 from astropy.time import Time
 #from dsautils.coordinates import get_pointing, get_galcoord
 import dsautils.coordinates
@@ -583,7 +583,7 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
         
         paramsdict = {'dm' : dm, 'ibox' : ibox, 'ibeam' : ibeam,
                       'snr' : heimsnr}
-        params = np.array([heimsnr, dm, ibox, ibeam])
+        params = np.array([heimsnr, dm, ibox, ibeam, imjd])
         
         g = h5py.File(fnout,'w')
         g.create_dataset('data_freq_time',data=dataft)
@@ -593,6 +593,7 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
         else:
             g.create_dataset('data_beam_time',data=beam_time_arr)
         g.create_dataset('params',data=params)
+        g.create_dataset('probability',data=[prob])        
         g.close()
     
         
