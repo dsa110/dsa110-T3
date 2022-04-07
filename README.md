@@ -1,2 +1,2 @@
 # dsa110-T3
-Imaging routines and visualizations for DSA-110's T3 system
+Management of the DSA110 T3 subsystem, including verification of candidate bursts.
