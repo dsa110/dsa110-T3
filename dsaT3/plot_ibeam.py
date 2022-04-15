@@ -24,8 +24,8 @@ if __name__=='__main__':
     print(fn)
     fnout = fn.split('/')[-1]
     dataft, datadm, tsdm0, dms, datadm0 = filplot_funcs.proc_cand_fil(fn, dm, 1, snrheim=-1,
-                                               pre_rebin=1, nfreq_plot=1024,
-                                               ndm=256, rficlean=True, norm=True)
+                                               pre_rebin=1, nfreq_plot=32,
+                                               ndm=256, rficlean=False, norm=True)
 #    mm = np.std(dataft,1)
 #    dataft[mm>1.265] = 0.0
 
