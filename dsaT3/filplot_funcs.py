@@ -26,7 +26,7 @@ from joblib import Parallel, delayed
 #import filterbank
 from sigpyproc.Readers import FilReader
 import slack
-
+import astropy.units as u
 from astropy.time import Time
 #from dsautils.coordinates import get_pointing, get_galcoord
 import dsautils.coordinates
@@ -37,9 +37,6 @@ d = ds.DsaStore()
 ncpu = multiprocessing.cpu_count() - 1 
 
 # Keras neural network model for Freq/Time array
-#MLMODELPATH='/home/user/connor/software/machine_learning/20190501freq_time.hdf5'
-#BASEDIR='/mnt/data/dsa110/'
-#webPLOTDIR=BASEDIR+'webPLOTS/'
 MLMODELPATH='/home/ubuntu/connor/MLmodel/20190501freq_time.hdf5'
 BASEDIR='/data/dsa110/'
 webPLOTDIR='/home/ubuntu/data/T3/'
@@ -185,8 +182,10 @@ def plotfour(dataft, datats, datadmt,
                                 width="25%", # width = 30% of parent_bbox
                                 height="25%", # height : 1 inch
                                 loc=4)
-        small_axes.imshow(beam_time_arr[::-1][ibeam-4:ibeam+4], aspect='auto', extent=[tmin, tmax, ibeam-4, ibeam+4],
-                                            interpolation='nearest', cmap='afmhot')
+        small_axes.imshow(beam_time_arr[::-1][ibeam-4:ibeam+4],
+                          aspect='auto',
+                          extent=[tmin, tmax, ibeam-4, ibeam+4],
+                          interpolation='nearest', cmap='afmhot')
         small_axes.set_xlim(400., 600.)
 
     if datadm0 is not None:
@@ -210,16 +209,7 @@ def plotfour(dataft, datats, datadmt,
         else:
             axs[2][0].legend(['DM=0 Timestream'], loc=2, fontsize=10)
         axs[2][0].set_xlabel('Time (ms)')
-        
-#        plt.subplot(326)
-#        plt.plot(np.linspace(freqmax,freqmin,datadm0.shape[0]), np.mean(datadm0,axis=-1), color='k')
-
-#        plt.semilogy()
-#        plt.legend(['spectrum'], loc=2)
-#        plt.xlabel('freq [MHz]')
-
-#        plt.subplot(326)
-        
+                
         if fnT2clust is not None:
             T2object = pandas.read_csv(fnT2clust)
             ind = np.where(np.abs(86400*(imjd-T2object.mjds[:]))<30.0)[0]
@@ -246,8 +236,8 @@ def plotfour(dataft, datats, datadmt,
                 if classification_dict['prob']<0.25:
                     not_real = True
 
-#    if classification_dict['prob']<0.01:
-#        not_real = True
+    if classification_dict['prob']<0.01:
+        not_real = True
 
     if not_real==True:
         suptitle += ' (Probably not real)'
@@ -260,7 +250,6 @@ def plotfour(dataft, datats, datadmt,
         fig.savefig(figname_out)
     if showplot:
         fig.show()
-#    plt.close(fig)
 
     return not_real
         
@@ -327,7 +316,6 @@ def proc_cand_fil(fnfil, dm, ibox, snrheim=-1,
     datadm0 = data.copy()
     
     if rficlean:
-#        print("Cleaning data perchannel")
         data = cleandata(data, clean_type='aladsa')
 
     tsdm0 = np.mean(data,axis=0)
@@ -430,7 +418,7 @@ def cleandata(data, threshold_time=3.25, threshold_frequency=2.75, bin_size=32,
             stdevt = np.std(dtmean_nobandpass)
             medt = np.median(dtmean_nobandpass)
             maskt = np.abs(dtmean_nobandpass - medt) > threshold_frequency*stdevt
-            data[maskt] = np.median(dtmean)#dtmean.reshape(-1, bin_size).mean(-1).repeat(bin_size)[maskt]
+            data[maskt] = np.median(dtmean)
 
     return data
 
@@ -512,7 +500,6 @@ def classify_freqtime(fnmodel, dataft):
     """
     if type(fnmodel)==str:
         from keras.models import load_model
-        fnmodel=MLMODELPATH
         model = load_model(fnmodel)
     else:
         model = fnmodel
@@ -596,7 +583,7 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
         
         paramsdict = {'dm' : dm, 'ibox' : ibox, 'ibeam' : ibeam,
                       'snr' : heimsnr}
-        params = np.array([heimsnr, dm, ibox, ibeam])
+        params = np.array([heimsnr, dm, ibox, ibeam, imjd])
         
         g = h5py.File(fnout,'w')
         g.create_dataset('data_freq_time',data=dataft)
@@ -606,6 +593,7 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
         else:
             g.create_dataset('data_beam_time',data=beam_time_arr)
         g.create_dataset('params',data=params)
+        g.create_dataset('probability',data=[prob])        
         g.close()
     
         
@@ -623,7 +611,7 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
 
 def filplot_entry(datestr,trigger_dict,
                   toslack=True,classify=True,
-                  rficlean=True,
+                  rficlean=False,
                   ndm=32,ntime_plot=64,
                   nfreq_plot=32,save_data=True,
                   fllisting=None):
@@ -695,7 +683,7 @@ def filplot_entry(datestr,trigger_dict,
     else:
         showplot=True
 
-    ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(obstime=Time(timehr, format='mjd'))
+    ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(ibeam, obstime=Time(timehr, format='mjd'))
     l, b = dsautils.coordinates.get_galcoord(ra_mjd.value, dec_mjd.value)
 #    ind_near = utils.match_pulsar(ra_mjd, dec_mjd, thresh_deg=3.5)
 
