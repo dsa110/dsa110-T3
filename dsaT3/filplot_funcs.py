@@ -623,32 +623,9 @@ def filplot_entry(datestr,trigger_dict,
     timehr = trigger_dict[trigname]['mjds']
     snr = trigger_dict[trigname]['snr']
 
-    inj_data = np.genfromtxt('/home/ubuntu/data/injections/injection_list.txt')
-    inj_data = d.get_dict('/mon/corr/injection')
-#    mjd_inj, ibeam_inj, dm_inj, snr_inj, width_inj, spec_ind, FRBno_inj = inj_data[:, 0],\
-#                                                                          inj_data[:, 1],\
-#                                                                          inj_data[:, 2],\
-#                                                                          inj_data[:, 3],\
-#                                                                          inj_data[:, 4],\
-#                                                                          inj_data[:, 5],\
-#                                                                          inj_data[:, 6]
-    mjd_inj, ibeam_inj, dm_inj, snr_inj, width_inj, spec_ind, FRBno_inj = inj_data['mjd'],\
-                                                                          inj_data['ibeam'],\
-                                                                          inj_data['dm'],\
-                                                                          inj_data['snr'],\
-                                                                          inj_data['width'],\
-                                                                          inj_data['spec_ind'],\
-                                                                          inj_data['frbno'],
-    
-    tdiff_min, tdiff_ind = 86400*np.min(np.abs(mjd_inj-timehr)), np.argmin(np.abs(mjd_inj-timehr))
-    # Check if any injected FRB is within 100 seconds,
-    # 25 DM units, and 2 ibeams. If so, label as fake.
-
-    if tdiff_min<100:
-        if np.abs(dm-dm_inj)<25.0:
-            if np.abs(ibeam-ibeam_inj)<2:
-                fake = True
-                print("This burst was injected")
+    if 'inj' in trigname:
+        fake = True
+        print("This burst was injected")
     else:
         print("Not injected")
         fake = False
