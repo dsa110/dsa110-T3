@@ -623,7 +623,7 @@ def filplot_entry(datestr,trigger_dict,
     timehr = trigger_dict[trigname]['mjds']
     snr = trigger_dict[trigname]['snr']
 
-    if 'inj' in trigname:
+    if '_inj' in trigname:
         fake = True
         print("This burst was injected")
     else:
