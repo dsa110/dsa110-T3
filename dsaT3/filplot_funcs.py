@@ -117,14 +117,13 @@ def plotfour(dataft, datats, datadmt,
     if xminplot<0:
         xmaxplot=xminplot+500+300*ibox/16        
         xminplot=0
-    xminplot,xmaxplot = 0, 1000.
+#    xminplot,xmaxplot = 0, 1000.
     dm_min, dm_max = dms[0], dms[1]
     tmin, tmax = 0., 1e3*dataft.header['tsamp']*ntime
     freqmax = dataft.header['fch1']
     freqmin = freqmax + dataft.header['nchans']*dataft.header['foff']
     freqs = np.linspace(freqmin, freqmax, nfreq)
     tarr = np.linspace(tmin, tmax, ntime)
-#    fig = plt.figure(figsize=(8,10))
     fig, axs = plt.subplots(3, 2, figsize=(8,10), constrained_layout=True)
 
     if fake:
