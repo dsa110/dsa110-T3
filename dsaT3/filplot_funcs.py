@@ -250,6 +250,8 @@ def plotfour(dataft, datats, datadmt,
         fig.savefig(figname_out)
     if showplot:
         fig.show()
+    else:
+        plt.close(fig)
 
     return not_real
         
