@@ -33,8 +33,8 @@ import dsautils.coordinates
 import dsautils.dsa_store as ds
 d = ds.DsaStore()
 
-
-ncpu = multiprocessing.cpu_count() - 1 
+#ncpu = multiprocessing.cpu_count() - 1
+ncpu = 8
 
 # Keras neural network model for Freq/Time array
 MLMODELPATH='/home/ubuntu/connor/MLmodel/20190501freq_time.hdf5'
@@ -235,8 +235,11 @@ def plotfour(dataft, datats, datadmt,
                 if classification_dict['prob']<0.25:
                     not_real = True
 
-    if classification_dict['prob']<0.01:
-        not_real = True
+    try:
+        if classification_dict['prob']<0.01:
+            not_real = True
+    except:
+        pass
 
     if not_real==True:
         suptitle += ' (Probably not real)'
@@ -533,29 +536,19 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
              fnT2clust=None, imjd=0, fake=False):
     """ Vizualize FRB candidates on DSA-110
     """
-#    if type(multibeam)==list:
-#        beam_time_arr, multibeam_dm0ts = generate_beam_time_arr(multibeam, ibeam=ibeam, pre_rebin=1, 
-#                                             dm=dm, ibox=ibox, 
-#                                             heim_raw_tres=heim_raw_tres)
-#                                                               
-#        x,y = np.where(beam_time_arr==beam_time_arr.max())
-#        ibeam = x[0]
-#        fn = flist[ibeam]
-#        for fn_ in flist:
-#            print(fn_, fn_.strip('_')[-1])
-#            if str(ibeam) in fn_.strip('_')[-1]:
-#                print(ibeam,'here')
-#    else:
-#        beam_time_arr = None
-#        multibeam_dm0ts = None
 
     if type(multibeam)==list:
         data_beam_freq_time = []
-        beam_time_arr_results = Parallel(n_jobs=ncpu)(delayed(generate_beam_time_arr)(multibeam[8*ii:8*(ii+1)],
+
+        nbeam=256
+        nbeam_chunk=nbeam//ncpu+1
+        print("Starting paralellized beam/time proc", ncpu)
+        # Now paralellize over number of beams
+        beam_time_arr_results = Parallel(n_jobs=ncpu,prefer="threads")(delayed(generate_beam_time_arr)(multibeam[nbeam_chunk*ii:nbeam_chunk*(ii+1)],
                                                               ibox=ibox, pre_rebin=1,
                                                               dm=dm, heim_raw_tres=heim_raw_tres)
-                                                              for ii in range(32))
-#        for datacube in beam_time_arr_results:
+                                                              for ii in range(ncpu))
+        #beam_time_arr_results = generate_beam_time_arr(multibeam, ibox=ibox, pre_rebin=1, dm=dm, heim_raw_tres=heim_raw_tres)
         beamno_arr=[]
         for ii in range(len(beam_time_arr_results)):
             beamno_arr.append(beam_time_arr_results[ii][2])
@@ -661,8 +654,17 @@ def filplot_entry(datestr,trigger_dict,
     else:
         showplot=True
 
-    ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(ibeam, obstime=Time(timehr, format='mjd'))
-    l, b = dsautils.coordinates.get_galcoord(ra_mjd.value, dec_mjd.value)
+    # VR hack
+    try:
+        ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(ibeam, obstime=Time(timehr, format='mjd'))
+        l, b = dsautils.coordinates.get_galcoord(ra_mjd.value, dec_mjd.value)
+    except:
+        ra_mjd = 1.0*u.deg
+        dec_mjd = 71.5*u.deg
+        l = 100.0
+        b = 50.0
+
+    
 #    ind_near = utils.match_pulsar(ra_mjd, dec_mjd, thresh_deg=3.5)
 
 #    psr_txt_str = ''
