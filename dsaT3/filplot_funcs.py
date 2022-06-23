@@ -45,8 +45,7 @@ with open(slack_file) as sf_handler:
 
 # Keras neural network model for Freq/Time array
 MLMODELPATH='/home/ubuntu/connor/MLmodel/20190501freq_time.hdf5'
-BASEDIR='/data/dsa110/'
-webPLOTDIR='/home/ubuntu/data/T3/'
+webPLOTDIR='/operations/T3/'
 
 plt.rcParams.update({
                     'font.size': 12,
@@ -649,6 +648,9 @@ def filplot_entry(datestr, trigger_dict, toslack=True, classify=True,
     timehr = trigger_dict[trigname]['mjds']
     snr = trigger_dict[trigname]['snr']
 
+    T2dir = '/operations/T2/'
+    T1dir = '/operations/T1/'
+
     if '_inj' in trigname:
         fake = True
         print("This burst was injected")
@@ -656,10 +658,11 @@ def filplot_entry(datestr, trigger_dict, toslack=True, classify=True,
         print("Not injected")
         fake = False
     
-    fnT2clust = '/data/dsa110/T2/%s/cluster_output.csv'%datestr
+    fnT2clust = f'{T2dir}/cluster_output.csv'
     
     if fllisting is None:
-        flist = glob.glob(BASEDIR+'/T1/corr*/'+datestr+'/fil_%s/*.fil' % trigname)
+
+        flist = glob.glob(f"{T1dir}/{trigname}/*.fil")
         flist.sort()
 
         beamindlist = []
@@ -704,8 +707,8 @@ def filplot_entry(datestr, trigger_dict, toslack=True, classify=True,
 #        dm_psr = utils.query['DM'][ind_jj]
 #        psr_txt_str += '%s/%s: %0.1f\n' % (name_psrb, name_psrj, dm_psr)
 
-    outstr = (trigname, dm, int(ibox), datestr, int(ibeam), timehr, ra_mjd.value, dec_mjd.value, l, b)
-    suptitle = 'candname:%s  DM:%0.1f  boxcar:%d \n%s ibeam:%d MJD:%f \nRa/Dec=%0.1f,%0.1f Gal lon/lat=%0.1f,%0.1f' % outstr
+    outstr = (trigname, dm, int(ibox), int(ibeam), timehr, ra_mjd.value, dec_mjd.value, l, b)
+    suptitle = 'candname:%s  DM:%0.1f  boxcar:%d \nibeam:%d MJD:%f \nRa/Dec=%0.1f,%0.1f Gal lon/lat=%0.1f,%0.1f' % outstr
 
     figdirout = webPLOTDIR
     figname = figdirout+trigname+'.png'

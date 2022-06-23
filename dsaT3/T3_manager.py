@@ -14,8 +14,8 @@ LOGGER.function("T3_manager")
 
 TIMEOUT_FIL = 60
 TIMEOUT_CORR = 21600
-FILPATH = '/media/ubuntu/ssd/T3/candidates/'
-OUTPUT_PATH = '/home/ubuntu/data/T3/'
+FILPATH = '/dataz/dsa110/operations/T1/'
+OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
 FIL_CORRS = ['corr01','corr02','corr09','corr13']
 TMPDIR = '/home/ubuntu/data/tmp/'
 
@@ -26,16 +26,14 @@ def run_filplot(a, wait=False):
     """
 
     # set up output dict and datestring
-    datestring = ds.get_dict('/cnf/datestring')
     output_dict = a[list(a.keys())[0]]
     output_dict['trigname'] = list(a.keys())[0]
-    output_dict['datestring'] = datestring
     fill_empty_dict(output_dict)
 
     # wait for specific filterbank file to be written
     ibeam = output_dict['ibeam'] + 1
-    corrXX = FIL_CORRS[int( (ibeam-1) / 64)]
-    filfile = '/data/dsa110/T1/' + corrXX + '/' + datestring + '/fil_' + output_dict['trigname'] + '/' + output_dict['trigname'] +	'_' + str(ibeam) + '.fil'
+    candname = output_dict['candname']
+    filfile = f"{FILPATH}/{candname}/{candname}_{ibeam}.fil"
 
     print(filfile)
     LOGGER.info('Working on {0}'.format(output_dict['trigname']))
@@ -101,7 +99,7 @@ def make_filterbanks(od):
     Returns list of file names.
     """
 
-    # corr ondes
+    # corr nodes
     corrs = ['corr03', 'corr04', 'corr05', 'corr06', 'corr07', 'corr08', 'corr10', 'corr11', 'corr12', 'corr14', 'corr15', 'corr16', 'corr18', 'corr19', 'corr21', 'corr22']
     freqs=["1498.75", "1487.03125", "1475.3125", "1463.59375", "1451.875", "1440.15625", "1428.4375", "1416.71875", "1405.0", "1393.28125", "1381.5625", "1369.84375", "1358.125", "1346.40625", "1334.6875", "1322.96875"]
 
