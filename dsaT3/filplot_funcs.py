@@ -623,9 +623,38 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
 def filplot_entry(datestr,trigger_dict,
                   toslack=True,classify=True,
                   rficlean=False,
-                  ndm=32,ntime_plot=64,
+                  ndm=32,
                   nfreq_plot=32,save_data=True,
                   fllisting=None):
+    """ Manage data for a given candidate in order to plot 
+    and classify. 
+    
+    Parameters
+    ----------
+    datestr : str 
+        datestring of observation
+    trigger_dict : dict
+        dictionary with candidate parameters, read from json file 
+    toslack : bool 
+        send plot to slack if real 
+    classify : bool 
+        classify dynamic spectrum with keras CNN
+    ndm : int 
+        number of DMs for DM/time plot
+    nfreq_plot : int 
+        number of freq channels for freq/time plot
+    save_data : bool 
+        save down classification data
+    fllisting : list 
+        list of filterbank files 
+        
+    Returns
+    -------
+    fnameout : str 
+        figure file path
+    real : bool
+        real event, as determined by classfication 
+    """
 
     trigname = list(trigger_dict.keys())[0]
     dm = trigger_dict[trigname]['dm']
@@ -706,6 +735,7 @@ def filplot_entry(datestr,trigger_dict,
                              heim_raw_tres=1, save_data=save_data,
                              candname=trigname, fnT2clust=fnT2clust, imjd=timehr,
                              fake=fake)
+    real = not not_real
 
     if not_real==True:
         print("Not real. Not sending to slack")
@@ -713,5 +743,5 @@ def filplot_entry(datestr,trigger_dict,
     if toslack and not_real==False:
         print("Sending to slack")
         slack_client.files_upload(channels='candidates',file=fnameout,initial_comment=fnameout)
-
-    return fnameout, prob
+      
+    return fnameout, real
