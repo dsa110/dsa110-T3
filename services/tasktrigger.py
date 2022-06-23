@@ -58,8 +58,11 @@ while True:
                 if len(tasks)<8:
                     candnames.append(trigname)        
                     if not os.path.exists('/home/ubuntu/data/T3/'+trigname+'.png'):
-                        res = client.submit(T3_manager.run_filplot, d)
-                        tasks.append(res)
+                        d_fp = client.submit(T3_manager.run_filplot, d)
+                        d_bf = client.submit(T3_manager.run_burstfit, d_fp)
+                        d_hr = client.submit(T3_manager.run_highres, d_bf)
+                        d_po = client.submit(T3_manager.run_pol, d_hr)
+                        tasks.append(d_po)
     
     try:
         print(f'{len(tasks)} tasks in queue')
