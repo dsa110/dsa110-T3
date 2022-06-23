@@ -20,13 +20,13 @@ import optparse
 from mpl_toolkits.axes_grid.inset_locator import inset_axes
 
 import multiprocessing
-from joblib import Parallel, delayed
+#from joblib import Parallel, delayed
 
 #import filterbank
 from sigpyproc.Readers import FilReader
-import slack
+import slack_sdk as slack
 
-ncpu = multiprocessing.cpu_count() - 1 
+#ncpu = multiprocessing.cpu_count() - 1 
 
 # Keras neural network model for Freq/Time array
 MLMODELPATH='/home/user/connor/software/machine_learning/20190501freq_time.hdf5'
@@ -478,10 +478,12 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
 
     if type(multibeam)==list:
         data_beam_freq_time = []
-        beam_time_arr_results = Parallel(n_jobs=ncpu)(delayed(generate_beam_time_arr)(multibeam[8*ii:8*(ii+1)],
-                                                              ibox=ibox, pre_rebin=1,
-                                                              dm=dm, heim_raw_tres=heim_raw_tres)
-                                                              for ii in range(32))
+#        beam_time_arr_results = Parallel(n_jobs=ncpu)(delayed(generate_beam_time_arr)(multibeam[8*ii:8*(ii+1)],
+#                                                              ibox=ibox, pre_rebin=1,
+#                                                              dm=dm, heim_raw_tres=heim_raw_tres)
+#                                                              for ii in range(32))
+        beam_time_arr_results = generate_beam_time_arr(multibeam, ibox=ibox, pre_rebin=1, dm=dm, heim_raw_tres=heim_raw_tres)
+
 #        for datacube in beam_time_arr_results:
         beamno_arr=[]
         for ii in range(len(beam_time_arr_results)):

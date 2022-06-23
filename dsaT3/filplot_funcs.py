@@ -21,11 +21,11 @@ import optparse
 import pandas
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-import multiprocessing
-from joblib import Parallel, delayed
+#import multiprocessing
+#from joblib import Parallel, delayed
 #import filterbank
 from sigpyproc.Readers import FilReader
-import slack
+import slack_sdk as slack
 import astropy.units as u
 from astropy.time import Time
 #from dsautils.coordinates import get_pointing, get_galcoord
@@ -33,8 +33,22 @@ import dsautils.coordinates
 import dsautils.dsa_store as ds
 d = ds.DsaStore()
 
+# set up slack client
+slack_file = '{0}/.config/slack_api'.format(
+    os.path.expanduser("~")
+)
+if not os.path.exists(slack_file):
+    raise RuntimeError(
+        "Could not find file with slack api token at {0}".format(
+            slack_file
+        )
+    )
+with open(slack_file) as sf_handler:
+    slack_token = sf_handler.read()
+    slack_client = slack.WebClient(token=slack_token)
+
 #ncpu = multiprocessing.cpu_count() - 1
-ncpu = 8
+#ncpu = 8
 
 # Keras neural network model for Freq/Time array
 MLMODELPATH='/home/ubuntu/connor/MLmodel/20190501freq_time.hdf5'
@@ -168,6 +182,7 @@ def plotfour(dataft, datats, datadmt,
         plt.text(0.20, 0.55, 'Multibeam info\n not available',
                 fontweight='bold')
     else:
+        print(beam_time_arr.shape)
         parent_axes.imshow(beam_time_arr[::-1], aspect='auto', extent=[tmin, tmax, 0, beam_time_arr.shape[0]], 
                   interpolation='nearest')
         parent_axes.axvline(540, ymin=0, ymax=6, color='r', linestyle='--', alpha=0.55)
@@ -541,19 +556,21 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
         data_beam_freq_time = []
 
         nbeam=256
-        nbeam_chunk=nbeam//ncpu+1
-        print("Starting paralellized beam/time proc", ncpu)
+#        nbeam_chunk=nbeam//ncpu+1
+#        print("Starting paralellized beam/time proc", ncpu)
         # Now paralellize over number of beams
-        beam_time_arr_results = Parallel(n_jobs=ncpu,prefer="threads")(delayed(generate_beam_time_arr)(multibeam[nbeam_chunk*ii:nbeam_chunk*(ii+1)],
-                                                              ibox=ibox, pre_rebin=1,
-                                                              dm=dm, heim_raw_tres=heim_raw_tres)
-                                                              for ii in range(ncpu))
-        #beam_time_arr_results = generate_beam_time_arr(multibeam, ibox=ibox, pre_rebin=1, dm=dm, heim_raw_tres=heim_raw_tres)
-        beamno_arr=[]
-        for ii in range(len(beam_time_arr_results)):
-            beamno_arr.append(beam_time_arr_results[ii][2])
-            data_beam_freq_time.append(beam_time_arr_results[ii][0])
-        data_beam_freq_time = np.concatenate(data_beam_freq_time, axis=0)
+#        beam_time_arr_results = Parallel(n_jobs=ncpu,prefer="threads")(delayed(generate_beam_time_arr)(multibeam[nbeam_chunk*ii:nbeam_chunk*(ii+1)],
+#                                                              ibox=ibox, pre_rebin=1,
+#                                                              dm=dm, heim_raw_tres=heim_raw_tres)
+#                                                              for ii in range(ncpu))
+        beam_time_arr_results = generate_beam_time_arr(multibeam, ibox=ibox, pre_rebin=1, dm=dm, heim_raw_tres=heim_raw_tres)
+#        for datacube in beam_time_arr_results:
+#        beamno_arr=[]
+#        for ii in range(len(beam_time_arr_results)):
+#            beamno_arr.append(beam_time_arr_results[ii][2])
+#            data_beam_freq_time.append(beam_time_arr_results[ii][0])
+#        data_beam_freq_time = np.concatenate(data_beam_freq_time, axis=0)
+        data_beam_freq_time, _, beamno_arr = beam_time_arr_results
         beam_time_arr = data_beam_freq_time.mean(1)
         multibeam_dm0ts = beam_time_arr.mean(0)
     else:
@@ -695,18 +712,6 @@ def filplot_entry(datestr,trigger_dict,
 
     if toslack and not_real==False:
         print("Sending to slack")
-        slack_file = '{0}/.config/slack_api'.format(
-            os.path.expanduser("~")
-        )
-        if not os.path.exists(slack_file):
-            raise RuntimeError(
-                "Could not find file with slack api token at {0}".format(
-                    slack_file
-                    )
-            )
-        with open(slack_file) as sf_handler:
-            slack_token = sf_handler.read()
-        client = slack.WebClient(token=slack_token);
-        client.files_upload(channels='candidates',file=fnameout,initial_comment=fnameout);
+        slack_client.files_upload(channels='candidates',file=fnameout,initial_comment=fnameout)
 
     return fnameout, prob
