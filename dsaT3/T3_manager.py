@@ -20,45 +20,6 @@ FIL_CORRS = ['corr01','corr02','corr09','corr13']
 TMPDIR = '/home/ubuntu/data/tmp/'
 
 
-def fill_empty_dict(od, emptyCorrs=True, correctCorrs=False):
-    """ Takes standard candidate dict, od, and resets entries to default values (e.g., None/False).
-    """
-
-    od['filfile'] = None
-    od['candplot'] = None
-    od['save'] = False
-    od['label'] = None
-    if emptyCorrs is True:
-        for corr in ['corr03','corr04','corr05','corr06','corr07','corr08','corr10','corr11','corr12','corr14','corr15','corr16','corr18','corr19','corr21','corr22']:
-            od[corr+'_data'] = None
-            od[corr+'_header'] = None
-
-    if correctCorrs is True:
-        for corr in ['corr03','corr04','corr05','corr06','corr07','corr08','corr10','corr11','corr12','corr14','corr15','corr16','corr18','corr19','corr21','corr22']:
-            if od[corr+'_data'] is not None:
-                od[corr+'_data'] = od[corr+'_data'][:-19]
-            if od[corr+'_header'] is not None:
-                od[corr+'_header'] = od[corr+'_header'][:-22]
-        
-
-def wait_for_local_file(fl, timeout):
-    """ Wait for file named fl to be written.
-    If timeout (in seconds) exceeded, then return None.
-    """
-
-    time_counter = 0
-    while not os.path.exists(fl):
-        time.sleep(1)
-        time_counter += 1
-        if time_counter > timeout:
-            return None
-
-    # wait in case file hasn't been written
-    time.sleep(10)
-
-    return fl
-    
-
 def run_filplot(a, wait=False):
     """ Given candidate dictionary, run filterbank analysis, plotting, and classification ("filplot").
     Returns dictionary with updated fields.
@@ -110,8 +71,35 @@ def run_filplot(a, wait=False):
 
     return output_dict
 
-# input dict is output_dict
+
+def run_burstfit(dd):
+    """ Given candidate dictionary, run burstfit analysis.
+    Returns new dictionary with refined DM, width, arrival time.
+    """
+
+    return dd.copy()
+
+
+def run_hires(dd):
+    """ Given candidate dictionary, create high time/freq filterbanks.
+    Returns new dictionary with new file locations?
+    """
+
+    return dd.copy()
+
+
+def run_pol(dd):
+    """ Given candidate dictionary, run polarization analysis.
+    Returns new dictionary with new file locations?
+    """
+
+    return dd.copy()
+
+
 def make_filterbanks(od):
+    """ Uses cand dictionary to get set up filterbanks.
+    Returns list of file names.
+    """
 
     # corr ondes
     corrs = ['corr03', 'corr04', 'corr05', 'corr06', 'corr07', 'corr08', 'corr10', 'corr11', 'corr12', 'corr14', 'corr15', 'corr16', 'corr18', 'corr19', 'corr21', 'corr22']
@@ -146,6 +134,45 @@ def make_filterbanks(od):
         flist.append(FILPATH + 'fil_' + od['trigname'] + '/'+od['trigname']+'_'+str(i)+'.fil')
         
     return flist
+    
+
+def fill_empty_dict(od, emptyCorrs=True, correctCorrs=False):
+    """ Takes standard candidate dict, od, and resets entries to default values (e.g., None/False).
+    """
+
+    od['filfile'] = None
+    od['candplot'] = None
+    od['save'] = False
+    od['label'] = None
+    if emptyCorrs is True:
+        for corr in ['corr03','corr04','corr05','corr06','corr07','corr08','corr10','corr11','corr12','corr14','corr15','corr16','corr18','corr19','corr21','corr22']:
+            od[corr+'_data'] = None
+            od[corr+'_header'] = None
+
+    if correctCorrs is True:
+        for corr in ['corr03','corr04','corr05','corr06','corr07','corr08','corr10','corr11','corr12','corr14','corr15','corr16','corr18','corr19','corr21','corr22']:
+            if od[corr+'_data'] is not None:
+                od[corr+'_data'] = od[corr+'_data'][:-19]
+            if od[corr+'_header'] is not None:
+                od[corr+'_header'] = od[corr+'_header'][:-22]
+        
+
+def wait_for_local_file(fl, timeout):
+    """ Wait for file named fl to be written.
+    If timeout (in seconds) exceeded, then return None.
+    """
+
+    time_counter = 0
+    while not os.path.exists(fl):
+        time.sleep(1)
+        time_counter += 1
+        if time_counter > timeout:
+            return None
+
+    # wait in case file hasn't been written
+    time.sleep(10)
+
+    return fl
     
 
 # a is dict from voltage copy service
