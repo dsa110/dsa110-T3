@@ -8,16 +8,6 @@ from dsautils import dsa_functions36
 client = Client('10.42.0.232:8786')
 de = dsa_store.DsaStore()
 
-def task(a):
-
-    T3dict = T3_manager.run(a)
-    return T3dict
-
-def task_nowait(a):
-
-    T3dict = T3_manager.run_nowait(a)
-    return T3dict
-
 
 tasks = []
 def cb_func(dd):
@@ -69,7 +59,7 @@ while True:
                 if len(tasks)<8:
                     candnames.append(trigname)        
                     if not os.path.exists('/home/ubuntu/data/T3/'+trigname+'.png'):
-                        res = client.submit(task_nowait, d)
+                        res = client.submit(T3_manager.run_filplot, d)
                         tasks.append(res)
     
     try:

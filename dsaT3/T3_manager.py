@@ -3,10 +3,14 @@ import numpy as np
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
 from dsaT3 import filplot_funcs as filf
-#import filplot_funcs as filf 
-ds = dsa_store.DsaStore()
 import time, os
 import json
+
+ds = dsa_store.DsaStore()
+LOGGER = dsl.DsaSyslogger()
+LOGGER.subsystem("software")
+LOGGER.app("dsaT3")
+LOGGER.function("T3_manager")
 
 TIMEOUT_FIL = 60
 TIMEOUT_CORR = 21600
@@ -15,13 +19,10 @@ OUTPUT_PATH = '/home/ubuntu/data/T3/'
 FIL_CORRS = ['corr01','corr02','corr09','corr13']
 TMPDIR = '/home/ubuntu/data/tmp/'
 
-LOGGER = dsl.DsaSyslogger()
-LOGGER.subsystem("software")
-LOGGER.app("dsaT3")
-LOGGER.function("T3_manager")
 
-# fills output_dict with empty entries
 def fill_empty_dict(od, emptyCorrs=True, correctCorrs=False):
+    """ Takes standard candidate dict, od, and resets entries to default values (e.g., None/False).
+    """
 
     od['filfile'] = None
     od['candplot'] = None
@@ -38,24 +39,18 @@ def fill_empty_dict(od, emptyCorrs=True, correctCorrs=False):
                 od[corr+'_data'] = od[corr+'_data'][:-19]
             if od[corr+'_header'] is not None:
                 od[corr+'_header'] = od[corr+'_header'][:-22]
-
-        
-# searches for local file
-def search_for_local_file(fl):
-
-    if os.path.exists(fl):
-        return fl
-    return None
         
 
-# waits for local file to be written
-def wait_for_local_file(fl,timt):
+def wait_for_local_file(fl, timeout):
+    """ Wait for file named fl to be written.
+    If timeout (in seconds) exceeded, then return None.
+    """
 
     time_counter = 0
     while not os.path.exists(fl):
         time.sleep(1)
         time_counter += 1
-        if time_counter > timt:
+        if time_counter > timeout:
             return None
 
     # wait in case file hasn't been written
@@ -63,9 +58,11 @@ def wait_for_local_file(fl,timt):
 
     return fl
     
-    
-# a is T3 trigger dict
-def run(a):
+
+def run_filplot(a, wait=False):
+    """ Given candidate dictionary, run filterbank analysis, plotting, and classification ("filplot").
+    Returns dictionary with updated fields.
+    """
 
     # set up output dict and datestring
     datestring = ds.get_dict('/cnf/datestring')
@@ -78,21 +75,22 @@ def run(a):
     ibeam = output_dict['ibeam'] + 1
     corrXX = FIL_CORRS[int( (ibeam-1) / 64)]
     filfile = '/data/dsa110/T1/' + corrXX + '/' + datestring + '/fil_' + output_dict['trigname'] + '/' + output_dict['trigname'] +	'_' + str(ibeam) + '.fil'
+
     print(filfile)
     LOGGER.info('Working on {0}'.format(output_dict['trigname']))
-    found_filfile = wait_for_local_file(filfile,TIMEOUT_FIL)
+    if wait:
+        found_filfile = wait_for_local_file(filfile,TIMEOUT_FIL)
+    else:
+        found_filfile = filfile if os.path.exists(filfile) else None
     output_dict['filfile'] = found_filfile
-
+    
     if found_filfile is None:
         LOGGER.error('No filfile for {0}'.format(output_dict['trigname']))
-        #with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'
-        #    json.dump(output_dict, f, ensure_ascii=False, indent=4)
-        
         return output_dict
     
-    # launch candplotter
+    # launch plot and classify
     try:
-        output_dict['candplot'], output_dict['probability'] = filf.filplot_entry(datestring,a,save_data=True,rficlean=False)
+        output_dict['candplot'], output_dict['probability'] = filf.filplot_entry(datestring, a, rficlean=False)
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
             output_dict['trigname'],
@@ -103,65 +101,8 @@ def run(a):
         )
         print(logging_string)
         LOGGER.error(logging_string)
-        #with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'
-        #    json.dump(output_dict, f, ensure_ascii=False, indent=4)
 
         return output_dict
-
-    # wait for voltage files to be written
-
-    # write output_dict to disk
-    with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'                  
-        json.dump(output_dict, f, ensure_ascii=False, indent=4)
-
-    return output_dict
-
-# a is T3 trigger dict
-def run_nowait(a):
-
-    # set up output dict and datestring
-    datestring = ds.get_dict('/cnf/datestring')
-    output_dict = a[list(a.keys())[0]]
-    output_dict['trigname'] = list(a.keys())[0]
-    output_dict['datestring'] = datestring
-    fill_empty_dict(output_dict)
-
-    # wait for specific filterbank file to be written
-    ibeam = output_dict['ibeam'] + 1
-    corrXX = FIL_CORRS[int( (ibeam-1) / 64)]
-    filfile = '/data/dsa110/T1/' + corrXX + '/' + datestring + '/fil_' + output_dict['trigname'] + '/' + output_dict['trigname'] +	'_' + str(ibeam) + '.fil'
-    print(filfile)
-    LOGGER.info('Working on {0}'.format(output_dict['trigname']))
-    found_filfile = search_for_local_file(filfile)
-    output_dict['filfile'] = found_filfile
-
-    if found_filfile is None:
-        LOGGER.error('No filfile for {0}'.format(output_dict['trigname']))
-        #with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'
-        #    json.dump(output_dict, f, ensure_ascii=False, indent=4)
-        return output_dict
-    
-    # launch candplotter
-    try:
-        output_dict['candplot'], output_dict['probability'] = filf.filplot_entry(datestring,a,rficlean=False)
-    except Exception as exception:
-        logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
-            output_dict['trigname'],
-            type(exception).__name__,
-            ''.join(
-                traceback.format_tb(exception.__traceback__)
-            )
-        )
-        print(logging_string)
-        LOGGER.error(logging_string)
-        
-        #with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'
-        #    json.dump(output_dict, f, ensure_ascii=False, indent=4)
-
-        return output_dict
-
-    # wait for voltage files to be written
-    
 
     # write output_dict to disk
     with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'                  
