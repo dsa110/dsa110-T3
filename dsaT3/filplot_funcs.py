@@ -652,6 +652,8 @@ def filplot_entry(datestr,trigger_dict,
     -------
     fnameout : str 
         figure file path
+    prob : float 
+        probability from dynamic spectrum CNN
     real : bool
         real event, as determined by classfication 
     """
@@ -744,4 +746,4 @@ def filplot_entry(datestr,trigger_dict,
         print("Sending to slack")
         slack_client.files_upload(channels='candidates',file=fnameout,initial_comment=fnameout)
       
-    return fnameout, real
+    return fnameout, prob, real
