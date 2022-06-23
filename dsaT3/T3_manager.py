@@ -92,7 +92,7 @@ def run(a):
     
     # launch candplotter
     try:
-        output_dict['candplot'], output_dict['probability'] = filf.filplot_entry(datestring,a,save_data=True,rficlean=False)
+        output_dict['candplot'], output_dict['probability'], real_candidate = filf.filplot_entry(datestring,a,save_data=True,rficlean=False)
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
             output_dict['trigname'],
