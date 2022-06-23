@@ -25,7 +25,7 @@ if __name__=='__main__':
     fnout = fn.split('/')[-1]
     dataft, datadm, tsdm0, dms, datadm0 = filplot_funcs.proc_cand_fil(fn, dm, 1, snrheim=-1,
                                                pre_rebin=1, nfreq_plot=1024,
-                                               ndm=256, rficlean=False, norm=True)
+                                                                      ndm=256, rficlean=False, norm=True, freq_ref=1400.)
 #    mm = np.std(dataft,1)
 #    dataft[mm>1.265] = 0.0
 
@@ -33,10 +33,14 @@ if __name__=='__main__':
     print('Saving high res data to:\n%s' % fnout)
     np.save(fnout, dataft)
     dataft = dataft.downsample(ibox)
-#    dataft = dataft.reshape(dataft.shape[0]//32, 32, dataft.shape[-1]).mean(1)
+    dataft = dataft.reshape(dataft.shape[0]//32, 32, dataft.shape[-1]).mean(1)
     
     nfreq, ntime = dataft.shape
-    xminplot,xmaxplot = 200,800 # milliseconds                                                                            
+    xminplot,xmaxplot = 400,600 # milliseconds
+    xminplot,xmaxplot = 500.-300*ibox/16.,500.+300*ibox/16 # milliseconds                                             
+    if xminplot<0:
+        xmaxplot=xminplot+500+300*ibox/16
+        xminplot=0
     tmin, tmax = 0., 1e3*dataft.header['tsamp']*ntime
     tarr = np.linspace(tmin, tmax, ntime)
     freqmax = dataft.header['fch1']
@@ -49,16 +53,16 @@ if __name__=='__main__':
     fig = plt.figure(figsize=(8,10))
     plt.subplot(311)
     plt.imshow(dataft-np.mean(dataft,axis=1,keepdims=True), aspect='auto', extent=extentft)
-    plt.xlim(0,1000)
+    plt.xlim(xminplot,xmaxplot)
     plt.xlabel('Time (ms)')
     plt.ylabel('Freq ')
     plt.subplot(312)
     plt.plot(tarr, dataft.mean(0))
-    plt.xlim(0,1000)    
+    plt.xlim(xminplot,xmaxplot)    
     plt.xlabel('Time (ms)')
     plt.subplot(313)
     plt.imshow(datadm, aspect='auto', extent=extentdm)
-    plt.xlim(0,1000)
+    plt.xlim(xminplot,xmaxplot)
     plt.suptitle('%s candname:%s \nDM:%0.1f boxcar:%d ibeam:%d' % (datestr, candname, dm, ibox, ibeam), color='C1')
     plt.show()
 

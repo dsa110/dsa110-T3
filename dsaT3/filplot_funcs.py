@@ -21,11 +21,11 @@ import optparse
 import pandas
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-import multiprocessing
-from joblib import Parallel, delayed
+#import multiprocessing
+#from joblib import Parallel, delayed
 #import filterbank
 from sigpyproc.Readers import FilReader
-import slack
+import slack_sdk as slack
 import astropy.units as u
 from astropy.time import Time
 #from dsautils.coordinates import get_pointing, get_galcoord
@@ -33,8 +33,22 @@ import dsautils.coordinates
 import dsautils.dsa_store as ds
 d = ds.DsaStore()
 
+# set up slack client
+slack_file = '{0}/.config/slack_api'.format(
+    os.path.expanduser("~")
+)
+if not os.path.exists(slack_file):
+    raise RuntimeError(
+        "Could not find file with slack api token at {0}".format(
+            slack_file
+        )
+    )
+with open(slack_file) as sf_handler:
+    slack_token = sf_handler.read()
+    slack_client = slack.WebClient(token=slack_token)
 
-ncpu = multiprocessing.cpu_count() - 1 
+#ncpu = multiprocessing.cpu_count() - 1
+#ncpu = 8
 
 # Keras neural network model for Freq/Time array
 MLMODELPATH='/home/ubuntu/connor/MLmodel/20190501freq_time.hdf5'
@@ -117,14 +131,13 @@ def plotfour(dataft, datats, datadmt,
     if xminplot<0:
         xmaxplot=xminplot+500+300*ibox/16        
         xminplot=0
-    xminplot,xmaxplot = 0, 1000.
+#    xminplot,xmaxplot = 0, 1000.
     dm_min, dm_max = dms[0], dms[1]
     tmin, tmax = 0., 1e3*dataft.header['tsamp']*ntime
     freqmax = dataft.header['fch1']
     freqmin = freqmax + dataft.header['nchans']*dataft.header['foff']
     freqs = np.linspace(freqmin, freqmax, nfreq)
     tarr = np.linspace(tmin, tmax, ntime)
-#    fig = plt.figure(figsize=(8,10))
     fig, axs = plt.subplots(3, 2, figsize=(8,10), constrained_layout=True)
 
     if fake:
@@ -169,6 +182,7 @@ def plotfour(dataft, datats, datadmt,
         plt.text(0.20, 0.55, 'Multibeam info\n not available',
                 fontweight='bold')
     else:
+        print(beam_time_arr.shape)
         parent_axes.imshow(beam_time_arr[::-1], aspect='auto', extent=[tmin, tmax, 0, beam_time_arr.shape[0]], 
                   interpolation='nearest')
         parent_axes.axvline(540, ymin=0, ymax=6, color='r', linestyle='--', alpha=0.55)
@@ -236,8 +250,11 @@ def plotfour(dataft, datats, datadmt,
                 if classification_dict['prob']<0.25:
                     not_real = True
 
-    if classification_dict['prob']<0.01:
-        not_real = True
+    try:
+        if classification_dict['prob']<0.01:
+            not_real = True
+    except:
+        pass
 
     if not_real==True:
         suptitle += ' (Probably not real)'
@@ -250,6 +267,8 @@ def plotfour(dataft, datats, datadmt,
         fig.savefig(figname_out)
     if showplot:
         fig.show()
+    else:
+        plt.close(fig)
 
     return not_real
         
@@ -532,34 +551,26 @@ def plot_fil(fn, dm, ibox, multibeam=None, figname_out=None,
              fnT2clust=None, imjd=0, fake=False):
     """ Vizualize FRB candidates on DSA-110
     """
-#    if type(multibeam)==list:
-#        beam_time_arr, multibeam_dm0ts = generate_beam_time_arr(multibeam, ibeam=ibeam, pre_rebin=1, 
-#                                             dm=dm, ibox=ibox, 
-#                                             heim_raw_tres=heim_raw_tres)
-#                                                               
-#        x,y = np.where(beam_time_arr==beam_time_arr.max())
-#        ibeam = x[0]
-#        fn = flist[ibeam]
-#        for fn_ in flist:
-#            print(fn_, fn_.strip('_')[-1])
-#            if str(ibeam) in fn_.strip('_')[-1]:
-#                print(ibeam,'here')
-#    else:
-#        beam_time_arr = None
-#        multibeam_dm0ts = None
 
     if type(multibeam)==list:
         data_beam_freq_time = []
-        beam_time_arr_results = Parallel(n_jobs=ncpu)(delayed(generate_beam_time_arr)(multibeam[8*ii:8*(ii+1)],
-                                                              ibox=ibox, pre_rebin=1,
-                                                              dm=dm, heim_raw_tres=heim_raw_tres)
-                                                              for ii in range(32))
+
+        nbeam=256
+#        nbeam_chunk=nbeam//ncpu+1
+#        print("Starting paralellized beam/time proc", ncpu)
+        # Now paralellize over number of beams
+#        beam_time_arr_results = Parallel(n_jobs=ncpu,prefer="threads")(delayed(generate_beam_time_arr)(multibeam[nbeam_chunk*ii:nbeam_chunk*(ii+1)],
+#                                                              ibox=ibox, pre_rebin=1,
+#                                                              dm=dm, heim_raw_tres=heim_raw_tres)
+#                                                              for ii in range(ncpu))
+        beam_time_arr_results = generate_beam_time_arr(multibeam, ibox=ibox, pre_rebin=1, dm=dm, heim_raw_tres=heim_raw_tres)
 #        for datacube in beam_time_arr_results:
-        beamno_arr=[]
-        for ii in range(len(beam_time_arr_results)):
-            beamno_arr.append(beam_time_arr_results[ii][2])
-            data_beam_freq_time.append(beam_time_arr_results[ii][0])
-        data_beam_freq_time = np.concatenate(data_beam_freq_time, axis=0)
+#        beamno_arr=[]
+#        for ii in range(len(beam_time_arr_results)):
+#            beamno_arr.append(beam_time_arr_results[ii][2])
+#            data_beam_freq_time.append(beam_time_arr_results[ii][0])
+#        data_beam_freq_time = np.concatenate(data_beam_freq_time, axis=0)
+        data_beam_freq_time, _, beamno_arr = beam_time_arr_results
         beam_time_arr = data_beam_freq_time.mean(1)
         multibeam_dm0ts = beam_time_arr.mean(0)
     else:
@@ -623,32 +634,9 @@ def filplot_entry(datestr,trigger_dict,
     timehr = trigger_dict[trigname]['mjds']
     snr = trigger_dict[trigname]['snr']
 
-    inj_data = np.genfromtxt('/home/ubuntu/data/injections/injection_list.txt')
-    inj_data = d.get_dict('/mon/corr/injection')
-#    mjd_inj, ibeam_inj, dm_inj, snr_inj, width_inj, spec_ind, FRBno_inj = inj_data[:, 0],\
-#                                                                          inj_data[:, 1],\
-#                                                                          inj_data[:, 2],\
-#                                                                          inj_data[:, 3],\
-#                                                                          inj_data[:, 4],\
-#                                                                          inj_data[:, 5],\
-#                                                                          inj_data[:, 6]
-    mjd_inj, ibeam_inj, dm_inj, snr_inj, width_inj, spec_ind, FRBno_inj = inj_data['mjd'],\
-                                                                          inj_data['ibeam'],\
-                                                                          inj_data['dm'],\
-                                                                          inj_data['snr'],\
-                                                                          inj_data['width'],\
-                                                                          inj_data['spec_ind'],\
-                                                                          inj_data['frbno'],
-    
-    tdiff_min, tdiff_ind = 86400*np.min(np.abs(mjd_inj-timehr)), np.argmin(np.abs(mjd_inj-timehr))
-    # Check if any injected FRB is within 100 seconds,
-    # 25 DM units, and 2 ibeams. If so, label as fake.
-
-    if tdiff_min<100:
-        if np.abs(dm-dm_inj)<25.0:
-            if np.abs(ibeam-ibeam_inj)<2:
-                fake = True
-                print("This burst was injected")
+    if '_inj' in trigname:
+        fake = True
+        print("This burst was injected")
     else:
         print("Not injected")
         fake = False
@@ -683,8 +671,17 @@ def filplot_entry(datestr,trigger_dict,
     else:
         showplot=True
 
-    ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(ibeam, obstime=Time(timehr, format='mjd'))
-    l, b = dsautils.coordinates.get_galcoord(ra_mjd.value, dec_mjd.value)
+    # VR hack
+    try:
+        ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(ibeam, obstime=Time(timehr, format='mjd'))
+        l, b = dsautils.coordinates.get_galcoord(ra_mjd.value, dec_mjd.value)
+    except:
+        ra_mjd = 1.0*u.deg
+        dec_mjd = 71.5*u.deg
+        l = 100.0
+        b = 50.0
+
+    
 #    ind_near = utils.match_pulsar(ra_mjd, dec_mjd, thresh_deg=3.5)
 
 #    psr_txt_str = ''
@@ -715,18 +712,6 @@ def filplot_entry(datestr,trigger_dict,
 
     if toslack and not_real==False:
         print("Sending to slack")
-        slack_file = '{0}/.config/slack_api'.format(
-            os.path.expanduser("~")
-        )
-        if not os.path.exists(slack_file):
-            raise RuntimeError(
-                "Could not find file with slack api token at {0}".format(
-                    slack_file
-                    )
-            )
-        with open(slack_file) as sf_handler:
-            slack_token = sf_handler.read()
-        client = slack.WebClient(token=slack_token);
-        client.files_upload(channels='candidates',file=fnameout,initial_comment=fnameout);
+        slack_client.files_upload(channels='candidates',file=fnameout,initial_comment=fnameout)
 
     return fnameout, prob
