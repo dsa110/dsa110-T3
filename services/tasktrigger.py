@@ -37,8 +37,7 @@ def docopy_func():
 
 
 # add callbacks from etcd                                                                                
-#docopy = de.get_dict('/cmd/corr/docopy') == 'True'
-docopy = True
+docopy = de.get_dict('/cmd/corr/docopy') == 'True'
 datestring = de.get_dict('/cnf/datestring')
 de.add_watch('/cnf/datestring', datestring_func())
 de.add_watch('/cmd/corr/docopy', docopy_func())
