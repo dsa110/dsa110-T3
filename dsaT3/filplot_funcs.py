@@ -606,7 +606,7 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
     return not_real, prob
 
 
-def filplot_entry(datestr, trigger_dict, toslack=True, classify=True,
+def filplot_entry(trigger_dict, toslack=True, classify=True,
                   rficlean=False, ndm=32, nfreq_plot=32, save_data=True,
                   fllisting=None):
     """ Given datestring and trigger dictionary, run filterbank plotting, classifying, slack posting.
