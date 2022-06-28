@@ -60,7 +60,7 @@ while True:
                     if not os.path.exists('/home/ubuntu/data/T3/'+trigname+'.png'):
                         d_fp = client.submit(T3_manager.run_filplot, d)
                         d_bf = client.submit(T3_manager.run_burstfit, d_fp)
-                        d_hr = client.submit(T3_manager.run_highres, d_bf)
+                        d_hr = client.submit(T3_manager.run_hires, d_bf)
                         d_po = client.submit(T3_manager.run_pol, d_hr)
                         tasks.append(d_po)
     
