@@ -7,8 +7,8 @@ from itertools import chain
 import re
 from astropy.time import Time
 import astropy.units as u
-from dsautils import dsa_syslogger as dsl
 from dsautils import cnf
+from dsautils import dsa_syslogger as dsl
 
 
 class DataManager:
@@ -19,8 +19,10 @@ class DataManager:
     candidates_subdirs = (
         "Level3", "Level2/voltages", "Level2/filterbank",
         "Level2/calibration", "other")
-
-    subband_corrnames = tuple(cnf.Conf().get('corr')['ch0'].keys())
+    try:
+        subband_corrnames = tuple(cnf.Conf().get('corr')['ch0'].keys())
+    except:
+        subband_corrnames = None
     nbeams = 256
 
     directory_structure = MappingProxyType({  # Ensure read only since shared between instances
