@@ -8,7 +8,7 @@ import re
 from astropy.time import Time
 import astropy.units as u
 from dsautils import cnf
-from dsautils import dsa_syslogger as dsl
+from dsautils import dsa_syslog as dsl
 
 
 class DataManager:
@@ -38,7 +38,7 @@ class DataManager:
                 'destination': (
                     "{candidates_dir}/{candname}/Level2/filterbank/{candname}_{beamnumber}.fil"),
             },
-        'beamfomer_weights':
+        'beamformer_weights':
             {
                 'target': "{operations_dir}/beamformer_weights/applied/",
                 'destination': "{candidates_dir}/{candname}/Level2/calibration/"
@@ -96,14 +96,14 @@ class DataManager:
         self.logger.info(
             f"Creating directory structure for candidate {self.candname}.")
 
-        self.cand_dir = self.candidates_dir / self.candname
+        cand_dir = self.candidates_dir / self.candname
         for subdir in self.candidates_subdirs:
-            newdir = self.cand_dir / subdir
+            newdir = cand_dir / subdir
             if not newdir.exists():
                 newdir.mkdir(parents=True)
 
         self.logger.info(
-            f"Directory structure at {self.cand_dir} created for {self.candname}.")
+            f"Directory structure at {cand_dir} created for {self.candname}.")
 
     def link_voltages(self) -> None:
         """Link voltages to candidate directory."""
@@ -135,11 +135,11 @@ class DataManager:
             sourcepath = Path(
                 self.directory_structure['filterbank']['target'].format(
                     operations_dir=self.operations_dir, candname=self.candname,
-                    beamnumber=beamnumber))
+                    beamnumber=f"{beamnumber:03d}"))
             destpath = Path(
                 self.directory_structure['filterbank']['destination'].format(
                     candidates_dir=self.candidates_dir, candname=self.candname,
-                    beamnumber=beamnumber))
+                    beamnumber=f"{beamnumber:03d}"))
             self.link_file(sourcepath, destpath)
 
         if self.nbeams:
@@ -148,7 +148,7 @@ class DataManager:
 
     def link_beamformer_weights(self) -> None:
         """Link beamformer weights to candidate directory.
-        
+
         Links the weights applied in the real-time system at the candidate time.
         """
         self.logger.info(
@@ -156,13 +156,15 @@ class DataManager:
 
         beamformer_dir = Path(self.directory_structure['beamformer_weights']['target'].format(
             operations_dir=self.operations_dir))
-        destdir = Path(self.directory_structure['beamformer_weights']['dest'])
+        destdir = Path(self.directory_structure['beamformer_weights']['destination'].format(candidates_dir=self.candidates_dir, candname=self.candname))
         beamformer_name = find_beamformer_weights(
             self.candtime, beamformer_dir)
-
+        
+        self.logger.info(f"Found beamformerweights: {beamformer_name}")
+        
         sourcepaths = chain(
-            beamformer_dir.glob(f"{beamformer_name}*.dat"),
-            beamformer_dir.glob(f"{beamformer_name}*.yaml"))
+            beamformer_dir.glob(f"beamformer_weights_{beamformer_name}*.dat"),
+            beamformer_dir.glob(f"beamformer_weights_{beamformer_name}*.yaml"))
 
         destpaths = []
         for sourcepath in sourcepaths:
@@ -186,8 +188,8 @@ class DataManager:
         date_format = '%Y-%m-%d'
 
         today = self.candtime.strftime(date_format)
-        yesterday = (self.candtime - 1 * u.h).strftime(date_format)
-        tomorrow = (self.candtime + 1 * u.h).strftime(date_format)
+        yesterday = (self.candtime - 1 * u.d).strftime(date_format)
+        tomorrow = (self.candtime + 1 * u.d).strftime(date_format)
         start = self.candtime - hours_to_save / 2 * u.h
         stop = self.candtime + hours_to_save / 2 * u.h
 
@@ -203,12 +205,12 @@ class DataManager:
 
         tokeep = []
         for sourcepath in sourcepaths:
-            filetime = sourcepath.stem.split('_')[0]
-            if within_times(start, filetime, stop):
+            filetime = time_from_hdf5_filename(sourcepath)
+            if within_times(start, stop, filetime):
                 tokeep.append(sourcepath)
 
         destpath = Path(self.directory_structure['hdf5_files']['destination'].format(
-            self.candidates_dir, self.candname))
+            candidates_dir=self.candidates_dir, candname=self.candname))
         for sourcepath in tokeep:
             self.link_file(sourcepath, destpath / sourcepath.name)
 
@@ -217,7 +219,7 @@ class DataManager:
 
         self.candparams['hdf5_files'] = (
             self.directory_structure['hdf5_files']['destination'].format(
-                self.candidates_dir, self.candname))
+                candidates_dir=self.candidates_dir, candname=self.candname))
 
     def link_field_ms(self) -> None:
         """Link the field measurement at the time of the candidate to the candidates directory."""
@@ -225,7 +227,7 @@ class DataManager:
 
     def link_caltables(self):
         """Link delay and bandpass calibration tables to the candidates directory.
-        
+
         Links tables generated from the most recent calibrator observation prior to the candidate.
         """
         raise NotImplementedError
@@ -238,7 +240,7 @@ class DataManager:
 
         sourcepath = Path(
             self.directory_structure['T2_csv']['target'].format(
-                operations_dir=self.operations_directory))
+                operations_dir=self.operations_dir))
         destpath = Path(
             self.directory_structure['T2_csv']['destination'].format(
                 candidates_dir=self.candidates_dir, candname=self.candname))
@@ -332,3 +334,5 @@ def find_beamformer_weights(candtime: Time, bfdir: Path) -> str:
     for avail_calib in avail_calibs:
         if avail_calib < isot_pattern.findall(candtime.isot)[0]:
             return avail_calib
+
+    raise RuntimeError(f"No beamformer weights found for {candtime.isot}")
