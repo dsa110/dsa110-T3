@@ -5,7 +5,8 @@ import astropy.units as u
 from astropy.time import Time
 
 from dsaT3.data_manager import (
-    DataManager, find_beamformer_weights, time_from_hdf5_filename, within_times)
+    DataManager, find_beamformer_weights, time_from_hdf5_filename,
+    within_times)
 
 CANDPARAMS = {
     'trigname': 'test',
@@ -50,37 +51,47 @@ class FakeDataManager(DataManager):
         self.fake_T2_data()
 
     def fake_voltage_data(self):
-        voltage_dir = Path(self.directory_structure['voltages']['target'].format(
-            operations_dir=self.operations_dir, hostname='corrXX', candname=self.candname)).parent
+        voltage_dir = Path(
+            self.directory_structure['voltages']['target'].format(
+                operations_dir=self.operations_dir, hostname='corrXX',
+                candname=self.candname)).parent
         if not voltage_dir.exists():
             voltage_dir.mkdir(parents=True)
         for corr in self.subband_corrnames:
-            voltage_path = Path(self.directory_structure['voltages']['target'].format(
-                operations_dir=self.operations_dir, hostname=corr, candname=self.candname))
+            voltage_path = Path(
+                self.directory_structure['voltages']['target'].format(
+                    operations_dir=self.operations_dir, hostname=corr,
+                    candname=self.candname))
             voltage_path.touch()
 
     def fake_filterbank_data(self):
-        filterbank_dir = Path(self.directory_structure['filterbank']['target'].format(
-            operations_dir=self.operations_dir, beamnumber='XX', candname=self.candname)).parent
+        filterbank_dir = Path(
+            self.directory_structure['filterbank']['target'].format(
+                operations_dir=self.operations_dir, beamnumber='XX',
+                candname=self.candname)).parent
         if not filterbank_dir.exists():
             filterbank_dir.mkdir(parents=True)
         for beam in range(self.nbeams):
-            filterbank_path = Path(self.directory_structure['filterbank']['target'].format(
-                operations_dir=self.operations_dir, beamnumber=f"{beam:03d}",
-                candname=self.candname))
+            filterbank_path = Path(
+                self.directory_structure['filterbank']['target'].format(
+                    operations_dir=self.operations_dir,
+                    beamnumber=f"{beam:03d}",
+                    candname=self.candname))
             filterbank_path.touch()
 
     def fake_beamformerweights_data(self):
         times = self.candtime + BFWEIGHTS_OFFSETS_DAYS * u.day
 
-        bf_dir = Path(self.directory_structure['beamformer_weights']['target'].format(
-            operations_dir=self.operations_dir))
+        bf_dir = Path(
+            self.directory_structure['beamformer_weights']['target'].format(
+                operations_dir=self.operations_dir))
         if not bf_dir.exists():
             bf_dir.mkdir(parents=True)
 
         for time in times:
             for sb in range(len(self.subband_corrnames)):
-                bf_path = bf_dir / f"beamformer_weights_{time.isot}_sb{sb:02d}.dat"
+                bf_path = (
+                    bf_dir / f"beamformer_weights_{time.isot}_sb{sb:02d}.dat")
                 bf_path.touch()
             bf_path = bf_dir / f"beamformer_weights_{time.isot}.yaml"
             bf_path.touch()
@@ -88,8 +99,9 @@ class FakeDataManager(DataManager):
     def fake_hdf5_data(self):
         times = self.candtime + HDF5FILES_OFFSETS_HOURS * u.hour
 
-        hdf5_dir = Path(self.directory_structure['hdf5_files']['target'].format(
-            operations_dir=self.operations_dir, hdf5_name='temp')).parent
+        hdf5_dir = Path(
+            self.directory_structure['hdf5_files']['target'].format(
+                operations_dir=self.operations_dir, hdf5_name='temp')).parent
         if not hdf5_dir.exists():
             hdf5_dir.mkdir(parents=True)
 
@@ -99,8 +111,9 @@ class FakeDataManager(DataManager):
                 hdf5_path.touch()
 
     def fake_T2_data(self):
-        T2_path = Path(self.directory_structure['T2_csv']['target'].format(
-            operations_dir=self.operations_dir, candname=self.candname))
+        T2_path = Path(
+            self.directory_structure['T2_csv']['target'].format(
+                operations_dir=self.operations_dir, candname=self.candname))
         if not T2_path.parent.exists():
             T2_path.parent.mkdir(parents=True)
         T2_path.touch()
@@ -123,13 +136,16 @@ def test_datamanager_call(tmpdir):
             "Level2/calibration", "other"):
         assert (dm.candidates_dir / dm.candname / subdir).exists()
 
-    filterbank_path = Path(dm.directory_structure['filterbank']['destination'].format(
-        candidates_dir=dm.candidates_dir, candname=dm.candname, beamnumber='*'))
+    filterbank_path = Path(
+        dm.directory_structure['filterbank']['destination'].format(
+            candidates_dir=dm.candidates_dir, candname=dm.candname,
+            beamnumber='*'))
     assert len(list(filterbank_path.parent.glob(
         filterbank_path.name))) == dm.nbeams
 
-    beamformer_path = Path(dm.directory_structure['beamformer_weights']['destination'].format(
-        candidates_dir=dm.candidates_dir, candname=dm.candname))
+    beamformer_path = Path(
+        dm.directory_structure['beamformer_weights']['destination'].format(
+            candidates_dir=dm.candidates_dir, candname=dm.candname))
     assert len(list(beamformer_path.glob('beamformer_weights*.dat'))
                ) == len(dm.subband_corrnames)
     assert len(list(beamformer_path.glob('beamformer_weights*.yaml'))) == 1
@@ -154,9 +170,12 @@ def test_datamanager_link_voltages(tmpdir):
 
     dm.link_voltages()
 
-    voltage_path = Path(dm.directory_structure['voltages']['destination'].format(
-        candidates_dir=dm.candidates_dir, candname=dm.candname, subband='*'))
-    assert len(list(voltage_path.parent.glob(voltage_path.name))) == len(dm.subband_corrnames)
+    voltage_path = Path(
+        dm.directory_structure['voltages']['destination'].format(
+            candidates_dir=dm.candidates_dir, candname=dm.candname,
+            subband='*'))
+    assert len(list(voltage_path.parent.glob(voltage_path.name))
+               ) == len(dm.subband_corrnames)
 
     for sb in range(len(dm.subband_corrnames)):
         assert isinstance(f'voltage_sb{sb:02d}', str)
@@ -167,8 +186,10 @@ def test_datamanager_link_filterbank(tmpdir):
     dm.create_directory_structure()
     dm.link_filterbank()
 
-    filterbank_path = Path(dm.directory_structure['filterbank']['destination'].format(
-        candidates_dir=dm.candidates_dir, candname=dm.candname, beamnumber='*'))
+    filterbank_path = Path(
+        dm.directory_structure['filterbank']['destination'].format(
+            candidates_dir=dm.candidates_dir, candname=dm.candname,
+            beamnumber='*'))
     assert len(list(filterbank_path.parent.glob(
         filterbank_path.name))) == dm.nbeams
 
@@ -180,8 +201,9 @@ def test_datamanager_link_beamformer_weights(tmpdir):
     dm.create_directory_structure()
     dm.link_beamformer_weights()
 
-    beamformer_path = Path(dm.directory_structure['beamformer_weights']['destination'].format(
-        candidates_dir=dm.candidates_dir, candname=dm.candname))
+    beamformer_path = Path(
+        dm.directory_structure['beamformer_weights']['destination'].format(
+            candidates_dir=dm.candidates_dir, candname=dm.candname))
     assert len(list(beamformer_path.glob('beamformer_weights*.dat'))
                ) == len(dm.subband_corrnames)
     assert len(list(beamformer_path.glob('beamformer_weights*.yaml'))) == 1
@@ -194,8 +216,9 @@ def test_datamanager_link_hdf5_files(tmpdir):
     dm.create_directory_structure()
     dm.link_hdf5_files()
 
-    hdf5_path = Path(dm.directory_structure['hdf5_files']['destination'].format(
-        candidates_dir=dm.candidates_dir, candname=dm.candname))
+    hdf5_path = Path(
+        dm.directory_structure['hdf5_files']['destination'].format(
+            candidates_dir=dm.candidates_dir, candname=dm.candname))
     assert len(list(hdf5_path.glob('*.hdf5'))) == len(dm.subband_corrnames)*2
     assert isinstance(dm.candparams["hdf5_files"], str)
 
@@ -218,6 +241,7 @@ def test_datamanager_link_T2csv(tmpdir):
         candidates_dir=dm.candidates_dir, candname=dm.candname))
     assert T2_path.exists()
     assert isinstance(dm.candparams["T2_csv"], str)
+
 
 def test_datamanager_link_file(tmpdir):
     dm = FakeDataManager(CANDPARAMS, tmpdir)
@@ -252,7 +276,8 @@ def test_time_from_hdf5_filename():
 
 def test_find_beamformer_weights(tmpdir):
     dm = FakeDataManager(CANDPARAMS, tmpdir)
-    beamformer_dir = Path(dm.directory_structure['beamformer_weights']['target'].format(
-        operations_dir=dm.operations_dir))
+    beamformer_dir = Path(
+        dm.directory_structure['beamformer_weights']['target'].format(
+            operations_dir=dm.operations_dir))
     found_weights = find_beamformer_weights(dm.candtime, beamformer_dir)
     assert abs((dm.candtime - Time(found_weights)).to_value(u.d) - 0.5) < 1e-5

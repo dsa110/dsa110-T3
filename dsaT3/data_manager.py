@@ -25,23 +25,31 @@ class DataManager:
         subband_corrnames = None
     nbeams = 256
 
-    directory_structure = MappingProxyType({  # Ensure read only since shared between instances
+    # Ensure read only since shared between instances
+    directory_structure = MappingProxyType({ 
         'voltages':
             {
-                'target': "{operations_dir}/T3/voltages/{hostname}_{candname}_data.out",
+                'target': (
+                    "{operations_dir}/T3/voltages/{hostname}_{candname}_"
+                    "data.out"),
                 'destination': (
-                    "{candidates_dir}/{candname}/Level2/voltages/{candname}_{subband}_data.out"),
+                    "{candidates_dir}/{candname}/Level2/voltages/{candname}_"
+                    "{subband}_data.out"),
             },
         'filterbank':
             {
-                'target': "{operations_dir}/T1/{candname}/{candname}_{beamnumber}.fil",
+                'target': (
+                    "{operations_dir}/T1/{candname}/{candname}_"
+                    "{beamnumber}.fil"),
                 'destination': (
-                    "{candidates_dir}/{candname}/Level2/filterbank/{candname}_{beamnumber}.fil"),
+                    "{candidates_dir}/{candname}/Level2/filterbank/{candname}_"
+                    "{beamnumber}.fil"),
             },
         'beamformer_weights':
             {
                 'target': "{operations_dir}/beamformer_weights/applied/",
-                'destination': "{candidates_dir}/{candname}/Level2/calibration/"
+                'destination': (
+                    "{candidates_dir}/{candname}/Level2/calibration/")
             },
         'hdf5_files':
             {
@@ -51,11 +59,13 @@ class DataManager:
         'T2_csv':
             {
                 'target': "{operations_dir}/T2/cluster_output.csv",
-                'destination': "{candidates_dir}/{candname}/Level2/T2_{candname}.csv"
+                'destination': (
+                    "{candidates_dir}/{candname}/Level2/T2_{candname}.csv")
             }
     })
 
-    def __init__(self, candparams: dict, logger: dsl.DsaSyslogger = None) -> None:
+    def __init__(
+            self, candparams: dict, logger: dsl.DsaSyslogger = None) -> None:
         """Initialize info from candidate.
 
         Parameters
@@ -149,19 +159,24 @@ class DataManager:
     def link_beamformer_weights(self) -> None:
         """Link beamformer weights to candidate directory.
 
-        Links the weights applied in the real-time system at the candidate time.
+        Links the weights applied in the real-time system at the candidate
+        time.
         """
         self.logger.info(
-            f"Linking beamformer weights to candidate directory for {self.candname}.")
+            f"Linking beamformer weights to candidate directory for "
+            f"{self.candname}.")
 
-        beamformer_dir = Path(self.directory_structure['beamformer_weights']['target'].format(
-            operations_dir=self.operations_dir))
-        destdir = Path(self.directory_structure['beamformer_weights']['destination'].format(candidates_dir=self.candidates_dir, candname=self.candname))
+        beamformer_dir = Path(
+            self.directory_structure['beamformer_weights']['target'].format(
+                operations_dir=self.operations_dir))
+        destdir = Path(
+            self.directory_structure['beamformer_weights']['destination'].format(
+                candidates_dir=self.candidates_dir, candname=self.candname))
         beamformer_name = find_beamformer_weights(
             self.candtime, beamformer_dir)
-        
+
         self.logger.info(f"Found beamformerweights: {beamformer_name}")
-        
+
         sourcepaths = chain(
             beamformer_dir.glob(f"beamformer_weights_{beamformer_name}*.dat"),
             beamformer_dir.glob(f"beamformer_weights_{beamformer_name}*.yaml"))
@@ -194,8 +209,8 @@ class DataManager:
         stop = self.candtime + hours_to_save / 2 * u.h
 
         self.logger.info(
-            f"Linking HDF5 files for {hours_to_save} hours to candidate directory for "
-            f"{self.candname}.")
+            f"Linking HDF5 files for {hours_to_save} hours to candidate "
+            f"directory for {self.candname}.")
 
         source_dir = self.operations_dir / "correlator"
         sourcepaths = chain(
@@ -209,8 +224,9 @@ class DataManager:
             if within_times(start, stop, filetime):
                 tokeep.append(sourcepath)
 
-        destpath = Path(self.directory_structure['hdf5_files']['destination'].format(
-            candidates_dir=self.candidates_dir, candname=self.candname))
+        destpath = Path(
+            self.directory_structure['hdf5_files']['destination'].format(
+                candidates_dir=self.candidates_dir, candname=self.candname))
         for sourcepath in tokeep:
             self.link_file(sourcepath, destpath / sourcepath.name)
 
@@ -222,13 +238,14 @@ class DataManager:
                 candidates_dir=self.candidates_dir, candname=self.candname))
 
     def link_field_ms(self) -> None:
-        """Link the field measurement at the time of the candidate to the candidates directory."""
+        """Link the field measurement at the time of the candidate."""
         raise NotImplementedError
 
     def link_caltables(self):
         """Link delay and bandpass calibration tables to the candidates directory.
 
-        Links tables generated from the most recent calibrator observation prior to the candidate.
+        Links tables generated from the most recent calibrator observation
+        prior to the candidate.
         """
         raise NotImplementedError
 
@@ -308,9 +325,9 @@ def time_from_hdf5_filename(sourcepath: Path) -> Time:
 def find_beamformer_weights(candtime: Time, bfdir: Path) -> str:
     """Find the beamformer weights that were in use at a time `candtime`.
 
-    The times in the beamformer weight names are the times when they were uploaded to the
-    correlator nodes. Therefore, we want the most recent calibration files that were created
-    before `candtime`.
+    The times in the beamformer weight names are the times when they were
+    uploaded to the correlator nodes. Therefore, we want the most recent
+    calibration files that were created before `candtime`.
 
     Parameters
     ----------
@@ -324,7 +341,8 @@ def find_beamformer_weights(candtime: Time, bfdir: Path) -> str:
     str
         Name of the beamformer weights applied at `candtime`.
     """
-    isot_string = r"[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]"
+    isot_string = (
+        r"[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]")
     isot_pattern = re.compile(isot_string)
     avail_calibs = sorted(
         [
