@@ -163,9 +163,11 @@ class DataManager:
                     beamnumber=f"{beamnumber:03d}"))
             self.link_file(sourcepath, destpath)
 
-        if self.nbeams:
-            self.candparams['filterbank'] = str(destpath.parent)
-            self.logger.info(f"Filterbank linked for {self.candname}.")
+        self.candparams['filterbank'] = str(destpath.parent)
+        self.candparams['filfile'] = self.directory_structure['filterbank']['destination'].format(
+            candidates_dir=self.candidates_dir, candname=self.candname,
+            beamnumber=f"{self.candparams['ibeam']+1:03d}")
+        self.logger.info(f"Filterbank linked for {self.candname}.")
 
     def link_beamformer_weights(self) -> None:
         """Link beamformer weights to candidate directory.
