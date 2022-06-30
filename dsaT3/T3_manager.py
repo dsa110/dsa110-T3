@@ -32,8 +32,8 @@ def run_filplot(a, wait=False):
 
     # wait for specific filterbank file to be written
     ibeam = output_dict['ibeam'] + 1
-    candname = output_dict['candname']
-    filfile = f"{FILPATH}/{candname}/{candname}_{ibeam}.fil"
+    trigname = output_dict['trigname']
+    filfile = f"{FILPATH}/{trigname}/{trigname}_{ibeam}.fil"
 
     print(filfile)
     LOGGER.info('Working on {0}'.format(output_dict['trigname']))
@@ -190,7 +190,7 @@ def run_copied(a):
 
     # launch candplotter
     try:
-        output_dict['candplot'] = filf.filplot_entry(datestring,a,fllisting=flist,rficlean=False)
+        output_dict['candplot'], prob, real = filf.filplot_entry(a, fllisting=flist, rficlean=False)
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
             output_dict['trigname'],

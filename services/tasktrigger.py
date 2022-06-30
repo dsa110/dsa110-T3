@@ -46,26 +46,32 @@ de.add_watch('/cmd/corr/docopy', docopy_func())
 candnames = []
 
 while True:
-
-    trig_jsons = sorted(glob.glob('/data/dsa110/T2/'+datestring+'/cluster_output*.json'))
-    for fl in trig_jsons:
-        f = open(fl)
-        d = json.load(f)
-        trigname = list(d.keys())[0]
-
-        if docopy is True:
-            if trigname not in candnames:
-                if len(tasks)<8:
-                    candnames.append(trigname)        
-                    if not os.path.exists('/home/ubuntu/data/T3/'+trigname+'.png'):
-                        d_fp = client.submit(T3_manager.run_filplot, d)
-                        d_bf = client.submit(T3_manager.run_burstfit, d_fp)
-                        d_hr = client.submit(T3_manager.run_hires, d_bf)
-                        d_po = client.submit(T3_manager.run_pol, d_hr)
-                        tasks.append(d_po)
+    # get list of triggers in T2, but not in T3
+    trig_jsons = sorted(glob.glob(f'/dataz/dsa110/operations/T2/cluster_output/cluster_output*.json'))
+    trig_candnames = [fl.split('/')[-1].lstrip('cluster_output').split('.')[0] for fl in trig_jsons]
+    t3_jsons = sorted(glob.glob(f'/dataz/dsa110/operations/T3/*.json'))
+    t3_candnames = [fl.split('/')[-1].split('.')[0] for fl in t3_jsons]
+    trig_jsons = [fl for fl, cn in zip(trig_jsons, trig_candnames) if cn not in t3_candnames]
+    print(f"Found {len(trig_jsons)} trigger jsons to process")
     
+    for fl in trig_jsons:
+        with open(fl) as fp:
+            d = json.load(fp)
+        candname = list(d.keys())[0]  # format written by initial trigger
+#        candname = d['trigname']  # should write it this way for consistency downstream
+
+#        if docopy is True:
+        if candname not in candnames:
+            print("Submitting task")
+            d_fp = client.submit(T3_manager.run_filplot, d, wait=True)
+            d_bf = client.submit(T3_manager.run_burstfit, d_fp)
+            d_hr = client.submit(T3_manager.run_hires, d_bf)
+            d_po = client.submit(T3_manager.run_pol, d_hr)
+            tasks.append(d_po)
+            candnames.append(candname)        
+
     try:
-        print(f'{len(tasks)} tasks in queue')
+        print(f'{len(tasks)} tasks in queue for candnames {candnames}')
         if len(tasks)==0:
             candnames = []
         for future in tasks:
@@ -73,6 +79,7 @@ while True:
                 dd = future.result()
                 print(f'\tTask complete for {dd["trigname"]}')
                 tasks.remove(future)
+                candnames.remove(dd["trigname"])
 
         de.put_dict('/mon/service/T3manager',{'cadence': 5, 'time': dsa_functions36.current_mjd()})
         sleep(5)
