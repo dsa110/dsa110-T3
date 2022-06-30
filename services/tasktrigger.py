@@ -62,12 +62,20 @@ while True:
 
 #        if docopy is True:
         if candname not in candnames:
-            print("Submitting task")
-            d_fp = client.submit(T3_manager.run_filplot, d, wait=True)
-            d_bf = client.submit(T3_manager.run_burstfit, d_fp)
-            d_hr = client.submit(T3_manager.run_hires, d_bf)
-            d_po = client.submit(T3_manager.run_pol, d_hr)
-            tasks.append(d_po)
+            print(f"Submitting task for candname {candname}")
+            d_fp = client.submit(T3_manager.run_filplot, d, wait=True)  # filplot and classify
+            d_bf = client.submit(T3_manager.run_burstfit, d_fp)  # burstfit model fit
+            d_vc = client.submit(T3_manager.run_voltagecopy, d_fp)  # copy voltages
+            d_h5 = client.submit(T3_manager.run_hdf5copy, d_fp)  # copy hdf5
+            d_fm = client.submit(T3_manager.run_fieldmscopy, d_fp)  # copy field image MS
+            d_hr = client.submit(T3_manager.run_hires, (d_bf, d_vc))  # create high resolution filterbank
+            d_cm = client.submit(T3_manager.run_candidatems, (d_bf, d_vc))  # make candidate image MS
+            d_po = client.submit(T3_manager.run_pol, d_hr)  # run pol analysis on hires filterbank
+            d_hb = client.submit(T3_manager.run_hiresburstfit, d_hr)  # run burstfit on hires filterbank
+            d_il = client.submit(T3_manager.run_imloc, d_cm)  # run image localization on candidate image MS
+            d_as = client.submit(T3_manager.run_astrometry, (d_fm, d_cm))  # astrometric burst image
+            fut = client.submit(T3_manager.run_final, (d_h5, d_po, d_hb, d_il, d_as))
+            tasks.append(fut)
             candnames.append(candname)        
 
     try:

@@ -5,19 +5,18 @@ import dsautils.dsa_syslog as dsl
 from dsaT3 import filplot_funcs as filf
 import time, os
 import json
+from dask.distributed import Lock
 
 ds = dsa_store.DsaStore()
+LOCK = Lock()
 LOGGER = dsl.DsaSyslogger()
 LOGGER.subsystem("software")
 LOGGER.app("dsaT3")
 LOGGER.function("T3_manager")
 
 TIMEOUT_FIL = 60
-TIMEOUT_CORR = 21600
 FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
-FIL_CORRS = ['corr01','corr02','corr09','corr13']
-TMPDIR = '/home/ubuntu/data/tmp/'
 
 
 def run_filplot(a, wait=False):
@@ -63,10 +62,8 @@ def run_filplot(a, wait=False):
 
         return output_dict
 
-    # write output_dict to disk
-    with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'                  
-        json.dump(output_dict, f, ensure_ascii=False, indent=4)
-
+    update_dict(output_dict)
+    
     return output_dict
 
 
@@ -74,6 +71,8 @@ def run_burstfit(dd):
     """ Given candidate dictionary, run burstfit analysis.
     Returns new dictionary with refined DM, width, arrival time.
     """
+
+    update_dict(output_dict)
 
     return dd.copy()
 
@@ -83,57 +82,149 @@ def run_hires(dd):
     Returns new dictionary with new file locations?
     """
 
+    update_dict(output_dict)
+
     return dd.copy()
 
 
-def run_pol(dd):
-    """ Given candidate dictionary, run polarization analysis.
+def run_hdf5copy(d_fp):
+    """ Given filplot candidate dictionary, copy hdf5 files
+    """
+
+    update_dict(output_dict)
+    
+    return d_fp.copy()
+
+
+def run_voltagecopy(d_fp):
+    """ Given filplot candidate dictionary, copy voltage files
+    """
+
+    update_dict(output_dict)
+    
+    return d_fp.copy()
+
+
+def run_hires(d_bf, d_vc):
+    """ Given burstfit and voltage dictionaries, generate hires filterbank files.
+    """
+
+    dd = d_bf.copy()
+    dd.update(d_vc)
+    
+    update_dict(dd)
+
+    return dd
+
+
+def run_pol(d_hr):
+    """ Given hires candidate dictionary, run polarization analysis.
     Returns new dictionary with new file locations?
     """
 
-    return dd.copy()
+    update_dict(d_hr)
+    
+    return d_hr.copy()
 
 
-def make_filterbanks(od):
-    """ Uses cand dictionary to get set up filterbanks.
-    Returns list of file names.
+def run_fieldmscopy(d_fp):
+    """ Given filplot candidate dictionary, copy field MS file.
+    Returns new dictionary with new file locations.
     """
 
-    # corr nodes
-    corrs = ['corr03', 'corr04', 'corr05', 'corr06', 'corr07', 'corr08', 'corr10', 'corr11', 'corr12', 'corr14', 'corr15', 'corr16', 'corr18', 'corr19', 'corr21', 'corr22']
-    freqs=["1498.75", "1487.03125", "1475.3125", "1463.59375", "1451.875", "1440.15625", "1428.4375", "1416.71875", "1405.0", "1393.28125", "1381.5625", "1369.84375", "1358.125", "1346.40625", "1334.6875", "1322.96875"]
+    update_dict(d_fp)
 
-    arg_splicer = ''
-    
-    # loop over corr nodes and run offline bf
-    for ci in np.arange(16):
+    return d_fp.copy()
 
-        if od[corrs[ci]+'_data'] is not None:
 
-            # copy calibrations file
-            os.system('scp '+corrs[ci]+'.sas.pvt:/home/ubuntu/proj/dsa110-shell/dsa110-xengine/utils/antennas.out '+TMPDIR+corrs[ci]+'.out')
+def run_candidatems(d_bf, d_vc):
+    """ Given filplot and voltage copy candidate dictionaries, make candidate MS image.
+    Returns new dictionary with new file locations.
+    """
 
-            # run offline beamformer
-            os.system('/home/ubuntu/proj/dsa110-shell/dsa110-xengine/src/dsaX_beamformer_offline -i '+od[corrs[ci]+'_data']+' -f '+TMPDIR+corrs[ci]+'.out -z '+freqs[ci]+' -a /home/ubuntu/vikram/process_voltages/flagants.dat')
-            os.system('mv '+TMPDIR+'output.dat '+TMPDIR+corrs[ci]+'_output.dat')
+    dd = d_bf.copy()
+    dd.update(d_vc)
 
-            arg_splicer += ' '+TMPDIR+corrs[ci]+'_output.dat '
+    update_dict(dd)
 
-        else:
+    return dd
 
-            arg_splicer += ' none '
-            
-    # run splicer
-    arg_splicer += ' ' + FILPATH + 'fil ' + od['trigname']
-    os.system('/home/ubuntu/proj/dsa110-shell/dsa110-xengine/src/splice_offline_beams '+arg_splicer)
 
-    flist = []
-    for i in np.arange(256):
-        flist.append(FILPATH + 'fil_' + od['trigname'] + '/'+od['trigname']+'_'+str(i)+'.fil')
+def run_pol(d_hr):
+    """ Given hires candidate dictionary, run polarization analysis.
+    Returns new dictionary with new file locations.
+    """
+
+    update_dict(d_hr)
+
+    return d_hr.copy()
+
+
+def run_hiresburstfit(d_hr):
+    """ Given hires candidate dictionary, run highres burstfit analysis.
+    Returns new dictionary with new file locations.
+    """
+
+    update_dict(d_hr)
+
+    return d_hr.copy()
+
+
+def run_imloc(d_cm):
+    """ Given candidate image MS, run image localization.
+    """
+
+    update_dict(d_cm)
+
+    return d_cm.copy()
+
+
+def run_imloc(d_cm):
+    """ Given candidate image MS, run image localization.
+    """
+
+    update_dict(d_cm)
+
+    return d_cm.copy()
+
+
+def run_astrometry(d_fm, d_cm):
+    """ Given field image MS and candidate image MS, run astrometric localization analysis.
+    """
+
+    dd = d_fm.copy()
+    dd.update(d_cm)
+
+    update_dict(dd)
+
+    return dd
+
+
+def run_final(d_h5, d_po, d_hb, d_il):
+    """ Token task to handle all final tasks in graph.
+    May also update etcd to notify of completion.
+    """
+
+    dd = d_h5.copy()
+    dd.update(d_po)
+    dd.update(d_hb)
+    dd.update(d_il)
+
+    update_dict(dd)
+
+    return dd
+
+
+def update_dict(dd, lock=LOCK):
+    """ Read, write, unlock dict on disk with file lock.
+    Uses trigname field to find file
+    """
+
+    with lock:
+        with open(OUTPUT_PATH + dd['trigname'] + '.json', 'w') as f: #encoding='utf-8'                  
+            json.dump(output_dict, f, ensure_ascii=False, indent=4)
+
         
-    return flist
-    
-
 def fill_empty_dict(od, emptyCorrs=True, correctCorrs=False):
     """ Takes standard candidate dict, od, and resets entries to default values (e.g., None/False).
     """
@@ -171,77 +262,5 @@ def wait_for_local_file(fl, timeout):
     time.sleep(10)
 
     return fl
-    
 
-# a is dict from voltage copy service
-def run_copied(a):
-
-    # set up output dict and datestring
-    datestring = ds.get_dict('/cnf/datestring')
-    output_dict = a[list(a.keys())[0]]
-    output_dict['trigname'] = list(a.keys())[0]
-    output_dict['datestring'] = datestring
-    fill_empty_dict(output_dict, emptyCorrs=False)
-
-    # make and merge filterbank files
-    flist = make_filterbanks(output_dict)
-    ibeam = output_dict['ibeam'] + 1
-    output_dict['filfile'] = FILPATH + datestring + '/fil_' + output_dict['trigname'] + '/' + output_dict['trigname'] +	'_' + str(ibeam) + '.fil'
-
-    # launch candplotter
-    try:
-        output_dict['candplot'], prob, real = filf.filplot_entry(a, fllisting=flist, rficlean=False)
-    except Exception as exception:
-        logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
-            output_dict['trigname'],
-            type(exception).__name__,
-            ''.join(
-                traceback.format_tb(exception.__traceback__)
-            )
-        )
-        print(logging_string)
-        LOGGER.error(logging_string)
-        #with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'
-        #    json.dump(output_dict, f, ensure_ascii=False, indent=4)
-
-        return output_dict
-
-    # wait for voltage files to be written
-    
-
-    # write output_dict to disk
-    with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'                  
-        json.dump(output_dict, f, ensure_ascii=False, indent=4)
-
-    return output_dict
-
-# to scp files
-def copy(a,nrep=5):
-
-    # make dir
-    datestring = ds.get_dict('/cnf/datestring')
-    odir = "/media/ubuntu/ssd/T3/"+datestring+"/"
-    os.system("mkdir -p "+odir)
-
-    # scp file
-    corrname = a[list(a.keys())[0]]
-    b = a[list(a.keys())[1]]
-    output_dict = b[list(b.keys())[0]]
-    output_dict['trigname'] = list(b.keys())[0]
-    output_dict['datestring'] = datestring
-    output_dict['corrname'] = corrname
-
-    remote_loc = "/home/ubuntu/data/"+output_dict['trigname']+"_header.json"
-    local_loc = odir+corrname+"_"+output_dict['trigname']+"_header.json"
-    #cmd = "ssh "+corrname+".sas.pvt 'sudo loginctl enable-linger ubuntu; source ~/.bashrc; screen -d -m scp "+remote_loc+" 10.41.0.182:"+local_loc+"'"
-    cmd = "ssh "+corrname+".sas.pvt 'sudo loginctl enable-linger ubuntu; source ~/.bashrc; screen -d -m rsync --partial --timeout=20 -avz "+remote_loc+" 10.41.0.182:"+local_loc+"'"    
-    os.system(cmd)
-    
-    remote_loc = "/home/ubuntu/data/"+output_dict['trigname']+"_data.out"
-    local_loc = odir+corrname+"_"+output_dict['trigname']+"_data.out"
-    #cmd = "ssh "+corrname+".sas.pvt 'sudo loginctl enable-linger ubuntu; source ~/.bashrc; screen -d -m scp "+remote_loc+" 10.41.0.182:"+local_loc+"'"
-    cmd = "ssh "+corrname+".sas.pvt 'sudo loginctl enable-linger ubuntu; source ~/.bashrc; screen -L -d -m bash /home/ubuntu/proj/dsa110-shell/dsa110-xengine/scripts/run_rsync.bash "+remote_loc+" 10.41.0.182:"+local_loc+"'"
-    os.system(cmd)
-
-    return output_dict
 
