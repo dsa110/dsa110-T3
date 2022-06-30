@@ -8,16 +8,6 @@ from dsautils import dsa_functions36
 client = Client('10.42.0.232:8786')
 de = dsa_store.DsaStore()
 
-def task(a):
-
-    T3dict = T3_manager.run(a)
-    return T3dict
-
-def task_nowait(a):
-
-    T3dict = T3_manager.run_nowait(a)
-    return T3dict
-
 
 tasks = []
 def cb_func(dd):
@@ -47,8 +37,7 @@ def docopy_func():
 
 
 # add callbacks from etcd                                                                                
-#docopy = de.get_dict('/cmd/corr/docopy') == 'True'
-docopy = True
+docopy = de.get_dict('/cmd/corr/docopy') == 'True'
 datestring = de.get_dict('/cnf/datestring')
 de.add_watch('/cnf/datestring', datestring_func())
 de.add_watch('/cmd/corr/docopy', docopy_func())
@@ -69,8 +58,11 @@ while True:
                 if len(tasks)<8:
                     candnames.append(trigname)        
                     if not os.path.exists('/home/ubuntu/data/T3/'+trigname+'.png'):
-                        res = client.submit(task_nowait, d)
-                        tasks.append(res)
+                        d_fp = client.submit(T3_manager.run_filplot, d)
+                        d_bf = client.submit(T3_manager.run_burstfit, d_fp)
+                        d_hr = client.submit(T3_manager.run_highres, d_bf)
+                        d_po = client.submit(T3_manager.run_pol, d_hr)
+                        tasks.append(d_po)
     
     try:
         print(f'{len(tasks)} tasks in queue')
