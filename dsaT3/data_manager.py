@@ -26,7 +26,7 @@ class DataManager:
     nbeams = 256
 
     # Ensure read only since shared between instances
-    directory_structure = MappingProxyType({ 
+    directory_structure = MappingProxyType({
         'voltages':
             {
                 'target': (
@@ -62,12 +62,12 @@ class DataManager:
                 'destination': (
                     "{candidates_dir}/{candname}/Level2/T2_{candname}.csv")
             },
-        'candplot_json':
+        'filplot_json':
             {
                 'target': "{operations_dir}/T3/{candname}.json",
                 'destination': "{candidates_dir}/{candname}/Level3/{candname}.json"
             },
-        'candplot_png':
+        'filplot_png':
             {
                 'target': "{operations_dir}/T3/{candname}.png",
                 'destination': "{candidates_dir}/{candname}/other/{candname}.png"
@@ -107,7 +107,7 @@ class DataManager:
         self.link_filterbank()
         self.link_beamformer_weights()
         self.link_T2_csv()
-        self.link_candplot_and_json()
+        self.link_filplot_and_json()
 
         return self.candparams
 
@@ -164,7 +164,7 @@ class DataManager:
             self.link_file(sourcepath, destpath)
 
         self.candparams['filterbank'] = str(destpath.parent)
-        self.candparams['filfile'] = self.directory_structure['filterbank']['destination'].format(
+        self.candparams['filfile_cand'] = self.directory_structure['filterbank']['destination'].format(
             candidates_dir=self.candidates_dir, candname=self.candname,
             beamnumber=f"{self.candparams['ibeam']+1:03d}")
         self.logger.info(f"Filterbank linked for {self.candname}.")
@@ -190,16 +190,21 @@ class DataManager:
 
         self.logger.info(f"Found beamformerweights: {beamformer_name}")
 
-        sourcepaths = chain(
-            beamformer_dir.glob(f"beamformer_weights_{beamformer_name}*.dat"),
-            beamformer_dir.glob(f"beamformer_weights_{beamformer_name}*.yaml"))
+        sourcepaths = beamformer_dir.glob(
+            f"beamformer_weights_{beamformer_name}*.dat")
 
-        destpaths = []
+        subband_pattern = re.compile(r'sb\d\d')
         for sourcepath in sourcepaths:
+            subband = subband_pattern.findall(sourcepath.name)
             destpath = destdir / sourcepath.name
             self.link_file(sourcepath, destpath)
-            destpaths.append(str(destpath))
-        self.candparams['beamformer_weights'] = sorted(destpaths)
+            self.candparams[f'beamformer_weights_{subband}'] = destpath
+
+        sourcepath = beamformer_dir.glob(
+            f"beamformer_weights_{beamformer_name}*.yaml")
+        destpath = destdir / sourcepath.name
+        self.link_file(sourcepath, destpath)
+        self.candparams['beamformer_weights'] = destpath
 
         self.logger.info(f"Beamformer weights linked for {self.candname}.")
 
@@ -280,13 +285,13 @@ class DataManager:
         self.logger.info(
             f"Linked T2 csv to candidate directory for {self.candname}")
 
-    def link_candplot_and_json(self):
-        """Link the candplotter json and png files."""
+    def link_filplot_and_json(self):
+        """Link the filplotter json and png files."""
         self.logger.info(
-            f"Linking candplotter json and png to candidate directory for "
+            f"Linking filplotter json and png to candidate directory for "
             f"{self.candname}.")
 
-        for file in ['candplot_json', 'candplot_png']:
+        for file in ['filplot_json', 'filplot_png']:
             sourcepath = Path(
                 self.directory_structure[file]['target'].format(
                     operations_dir=self.operations_dir, candname=self.candname))
@@ -295,10 +300,10 @@ class DataManager:
                     candidates_dir=self.candidates_dir, candname=self.candname))
             self.link_file(sourcepath, destpath)
 
-        self.candparams['candplot'] = str(destpath)
+        self.candparams['filplot_cand'] = str(destpath)
 
         self.logger.info(
-            f"Linked candplotter json and png to candidate directory for "
+            f"Linked filplotter json and png to candidate directory for "
             f"{self.candname}")
 
     def link_file(self, sourcepath: Path, destpath: Path) -> None:
