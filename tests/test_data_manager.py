@@ -49,6 +49,7 @@ class FakeDataManager(DataManager):
         self.fake_beamformerweights_data()
         self.fake_hdf5_data()
         self.fake_T2_data()
+        self.fake_candplot_data()
 
     def fake_voltage_data(self):
         voltage_dir = Path(
@@ -118,6 +119,16 @@ class FakeDataManager(DataManager):
             T2_path.parent.mkdir(parents=True)
         T2_path.touch()
 
+    def fake_candplot_data(self):
+        for file in ['candplot_json', 'candplot_png']:
+            candplot_path = Path(
+                self.directory_structure[file]['target'].format(
+                    operations_dir=self.operations_dir,
+                    candname=self.candname))
+            if not candplot_path.parent.exists():
+                candplot_path.parent.mkdir(parents=True)
+            candplot_path.touch()
+
 
 def test_datamanager_init(tmpdir):
     dm = FakeDataManager(CANDPARAMS, tmpdir)
@@ -178,7 +189,7 @@ def test_datamanager_link_voltages(tmpdir):
                ) == len(dm.subband_corrnames)
 
     for sb in range(len(dm.subband_corrnames)):
-        assert isinstance(f'voltage_sb{sb:02d}', str)
+        assert isinstance(dm.candparams[f'voltage_sb{sb:02d}'], str)
 
 
 def test_datamanager_link_filterbank(tmpdir):
@@ -241,6 +252,19 @@ def test_datamanager_link_T2csv(tmpdir):
         candidates_dir=dm.candidates_dir, candname=dm.candname))
     assert T2_path.exists()
     assert isinstance(dm.candparams["T2_csv"], str)
+
+
+def test_link_candplot_and_json(tmpdir):
+    dm = FakeDataManager(CANDPARAMS, tmpdir)
+    dm.create_directory_structure()
+
+    dm.link_candplot_and_json()
+
+    for file in ['candplot_json', 'candplot_png']:
+        filepath = Path(dm.directory_structure[file]['destination'].format(
+            candidates_dir=dm.candidates_dir, candname=dm.candname))
+        assert filepath.exists()
+    assert isinstance(dm.candparams['candplot_png'], str)
 
 
 def test_datamanager_link_file(tmpdir):

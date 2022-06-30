@@ -61,6 +61,16 @@ class DataManager:
                 'target': "{operations_dir}/T2/cluster_output.csv",
                 'destination': (
                     "{candidates_dir}/{candname}/Level2/T2_{candname}.csv")
+            },
+        'candplot_json':
+            {
+                'target': "{operations_dir}/T3/{candname}.json",
+                'destination': "{candidates_dir}/{candname}/Level3/{candname}.json"
+            },
+        'candplot_png':
+            {
+                'target': "{operations_dir}/T3/{candname}.png",
+                'destination': "{candidates_dir}/{candname}/other/{candname}.png"
             }
     })
 
@@ -97,6 +107,7 @@ class DataManager:
         self.link_filterbank()
         self.link_beamformer_weights()
         self.link_T2_csv()
+        self.link_candplot_and_json()
 
         return self.candparams
 
@@ -266,6 +277,27 @@ class DataManager:
 
         self.logger.info(
             f"Linked T2 csv to candidate directory for {self.candname}")
+
+    def link_candplot_and_json(self):
+        """Link the candplotter json and png files."""
+        self.logger.info(
+            f"Linking candplotter json and png to candidate directory for "
+            f"{self.candname}.")
+
+        for file in ['candplot_json', 'candplot_png']:
+            sourcepath = Path(
+                self.directory_structure[file]['target'].format(
+                    operations_dir=self.operations_dir, candname=self.candname))
+            destpath = Path(
+                self.directory_structure[file].format(
+                    candidates_dir=self.candidates_dir, candname=self.candname))
+            self.link_file(sourcepath, destpath)
+
+        self.candparams['candplot'] = str(destpath)
+
+        self.logger.info(
+            f"Linked candplotter json and png to candidate directory for "
+            f"{self.candname}")
 
     def link_file(self, sourcepath: Path, destpath: Path) -> None:
         """Link `destpath` to `sourcepath` if `sourcepath` does not already exist.
