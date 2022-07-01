@@ -158,8 +158,10 @@ class DataManager:
                 else:
                     try:
                         self.copy_file(sourcepath_scp, destpath, remote=True)
-                    except subprocess.CalledProcessError:
-                        pass
+                    except subprocess.CalledProcessError as exc:
+                        self.logger.error(
+                            f"scp returned non-zero error code copying {sourcepath_scp} to "
+                            f"{destpath} with output: {exc}")
                     else:
                         found[subband] = True
 
@@ -394,8 +396,8 @@ class DataManager:
             return
 
         if remote:
-            subprocess.run(
-                f"scp {sourcepath} {destpath}", shell=True, check=True)
+            subprocess.check_output(
+                f"scp {sourcepath} {destpath}", shell=True, stderr=subprocess.STDOUT)
         else:
             shutil.copy(str(sourcepath), str(destpath))
 
