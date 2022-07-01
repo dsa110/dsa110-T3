@@ -63,7 +63,7 @@ while True:
 #        if docopy is True:
         if candname not in candnames:
             print(f"Submitting task for candname {candname}")
-            d_fp = client.submit(T3_manager.run_filplot, d, wait=True)  # filplot and classify
+            d_fp = client.submit(T3_manager.run_filplot, d, wait=True, retries=1)  # filplot and classify
             d_bf = client.submit(T3_manager.run_burstfit, d_fp)  # burstfit model fit
             d_vc = client.submit(T3_manager.run_voltagecopy, d_fp)  # copy voltages
             d_h5 = client.submit(T3_manager.run_hdf5copy, d_fp)  # copy hdf5

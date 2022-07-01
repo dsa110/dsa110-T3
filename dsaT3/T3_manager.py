@@ -98,7 +98,7 @@ def run_voltagecopy(d_fp):
     """ Given filplot candidate dictionary, copy voltage files
     """
 
-    print('run_voltagecopy on {0}'.format(d_fp'trigname']))
+    print('run_voltagecopy on {0}'.format(d_fp['trigname']))
     LOGGER.info('run_voltagecopy on {0}'.format(d_fp['trigname']))
 
     update_dict(d_fp)
