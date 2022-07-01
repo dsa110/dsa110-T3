@@ -5,11 +5,10 @@ import dsautils.dsa_syslog as dsl
 from dsaT3 import filplot_funcs as filf
 import time, os
 import json
-from dask.distributed import Lock, Client
+from dask.distributed import Client
 
 client = Client('10.42.0.232:8786')
 ds = dsa_store.DsaStore()
-LOCK = Lock()
 LOGGER = dsl.DsaSyslogger()
 LOGGER.subsystem("software")
 LOGGER.app("dsaT3")
@@ -20,7 +19,7 @@ FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
 
 
-def run_filplot(a, wait=False):
+def run_filplot(a, wait=False, lock=None):
     """ Given candidate dictionary, run filterbank analysis, plotting, and classification ("filplot").
     Returns dictionary with updated fields.
     """
@@ -64,12 +63,12 @@ def run_filplot(a, wait=False):
 
         return output_dict
 
-    update_dict(output_dict)
+    update_json(output_dict, lock=lock)
     
     return output_dict
 
 
-def run_burstfit(dd):
+def run_burstfit(dd, lock=None):
     """ Given candidate dictionary, run burstfit analysis.
     Returns new dictionary with refined DM, width, arrival time.
     """
@@ -77,36 +76,36 @@ def run_burstfit(dd):
     print('run_burstfit on {0}'.format(dd['trigname']))
     LOGGER.info('run_burstfit on {0}'.format(dd['trigname']))
 
-    update_dict(dd)
+    update_json(dd, lock=lock)
 
     return dd.copy()
 
 
-def run_hdf5copy(d_fp):
+def run_hdf5copy(d_fp, lock=None):
     """ Given filplot candidate dictionary, copy hdf5 files
     """
 
     print('run_hdf5copy on {0}'.format(d_fp['trigname']))
     LOGGER.info('run_hdf5copy on {0}'.format(d_fp['trigname']))
 
-    update_dict(d_fp)
+    update_json(d_fp, lock=lock)
     
     return d_fp.copy()
 
 
-def run_voltagecopy(d_fp):
+def run_voltagecopy(d_fp, lock=None):
     """ Given filplot candidate dictionary, copy voltage files
     """
 
     print('run_voltagecopy on {0}'.format(d_fp['trigname']))
     LOGGER.info('run_voltagecopy on {0}'.format(d_fp['trigname']))
 
-    update_dict(d_fp)
+    update_json(d_fp, lock=lock)
     
     return d_fp.copy()
 
 
-def run_hires(dds):
+def run_hires(dds, lock=None):
     """ Given burstfit and voltage dictionaries, generate hires filterbank files.
     """
 
@@ -118,12 +117,12 @@ def run_hires(dds):
 
     dd.update(d_vc)
     
-    update_dict(dd)
+    update_json(dd, lock=lock)
 
     return dd
 
 
-def run_pol(d_hr):
+def run_pol(d_hr, lock=None):
     """ Given hires candidate dictionary, run polarization analysis.
     Returns new dictionary with new file locations?
     """
@@ -131,12 +130,12 @@ def run_pol(d_hr):
     print('run_pol on {0}'.format(d_hr['trigname']))
     LOGGER.info('run_pol on {0}'.format(d_hr['trigname']))
 
-    update_dict(d_hr)
+    update_json(d_hr, lock=lock)
     
     return d_hr.copy()
 
 
-def run_fieldmscopy(d_fp):
+def run_fieldmscopy(d_fp, lock=None):
     """ Given filplot candidate dictionary, copy field MS file.
     Returns new dictionary with new file locations.
     """
@@ -144,12 +143,12 @@ def run_fieldmscopy(d_fp):
     print('run_fieldmscopy on {0}'.format(d_fp['trigname']))
     LOGGER.info('run_fieldmscopy on {0}'.format(d_fp['trigname']))
 
-    update_dict(d_fp)
+    update_json(d_fp, lock=lock)
 
     return d_fp.copy()
 
 
-def run_candidatems(dds):
+def run_candidatems(dds, lock=None):
     """ Given filplot and voltage copy candidate dictionaries, make candidate MS image.
     Returns new dictionary with new file locations.
     """
@@ -162,12 +161,12 @@ def run_candidatems(dds):
 
     dd.update(d_vc)
 
-    update_dict(dd)
+    update_json(dd, lock=lock)
 
     return dd
 
 
-def run_hiresburstfit(d_hr):
+def run_hiresburstfit(d_hr, lock=None):
     """ Given hires candidate dictionary, run highres burstfit analysis.
     Returns new dictionary with new file locations.
     """
@@ -175,24 +174,24 @@ def run_hiresburstfit(d_hr):
     print('run_hiresburstfit on {0}'.format(d_hr['trigname']))
     LOGGER.info('run_hiresburstfit on {0}'.format(d_hr['trigname']))
 
-    update_dict(d_hr)
+    update_json(d_hr, lock=lock)
 
     return d_hr.copy()
 
 
-def run_imloc(d_cm):
+def run_imloc(d_cm, lock=None):
     """ Given candidate image MS, run image localization.
     """
 
     print('run_imloc on {0}'.format(d_cm['trigname']))
     LOGGER.info('run_imloc on {0}'.format(d_cm['trigname']))
 
-    update_dict(d_cm)
+    update_json(d_cm, lock=lock)
 
     return d_cm.copy()
 
 
-def run_astrometry(dds):
+def run_astrometry(dds, lock=None):
     """ Given field image MS and candidate image MS, run astrometric localization analysis.
     """
 
@@ -204,12 +203,12 @@ def run_astrometry(dds):
 
     dd.update(d_cm)
 
-    update_dict(dd)
+    update_json(dd, lock=lock)
 
     return dd
 
 
-def run_final(dds):
+def run_final(dds, lock=None):
     """ Token task to handle all final tasks in graph.
     May also update etcd to notify of completion.
     """
@@ -224,34 +223,38 @@ def run_final(dds):
     dd.update(d_hb)
     dd.update(d_il)
 
-    update_dict(dd)
+    update_json(dd, lock=lock)
 
     return dd
 
 
-def update_dict(dd, lock=LOCK):
-    """ Read, write, unlock dict on disk with file lock.
+def update_json(dd, lock):
+    """ Lock, read, write, unlock json file on disk.
     Uses trigname field to find file
     """
 
     fn = OUTPUT_PATH + dd['trigname'] + '.json'
     print(f'locking during open/update/write of {fn}')
-    with lock(timeout="5s"):
-        if not os.path.exists(fn):
-            with open(fn, 'w') as f:
-                json.dump(dd, f)
-        else:
-            try:
-                with open(fn, 'r') as f:
-                    extant_json = json.load(f)
-                    extant_json.update(dd)
-                    with open(fn, 'w') as f:
-                        json.dump(extant_json, f, ensure_ascii=False, indent=4)
-            except json.JSONDecodeError:
-                with open(fn, 'w') as f:
-                    json.dump(dd, f)
 
-        
+    lock.acquire(timeout="5s")
+    
+    if not os.path.exists(fn):
+        with open(fn, 'w') as f:
+            json.dump(dd, f, ensure_ascii=False, indent=4)
+    else:
+        try:
+            with open(fn, 'r') as f:
+                extant_json = json.load(f)
+                extant_json.update(dd)
+                with open(fn, 'w') as f:
+                    json.dump(extant_json, f, ensure_ascii=False, indent=4)
+        except json.JSONDecodeError:
+            with open(fn, 'w') as f:
+                json.dump(dd, f, ensure_ascii=False, indent=4)
+
+    lock.release()
+
+
 def fill_empty_dict(od, emptyCorrs=True, correctCorrs=False):
     """ Takes standard candidate dict, od, and resets entries to default values (e.g., None/False).
     """

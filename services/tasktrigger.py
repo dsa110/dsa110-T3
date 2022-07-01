@@ -1,5 +1,5 @@
 from time import sleep
-from dask.distributed import Client
+from dask.distributed import Client, Lock
 from dsautils import dsa_store
 from dsaT3 import T3_manager
 import glob, os, json
@@ -7,6 +7,7 @@ from dsautils import dsa_functions36
 
 client = Client('10.42.0.232:8786')
 de = dsa_store.DsaStore()
+LOCK = Lock('update_json')
 
 
 tasks = []
@@ -63,18 +64,18 @@ while True:
 #        if docopy is True:
         if candname not in candnames:
             print(f"Submitting task for candname {candname}")
-            d_fp = client.submit(T3_manager.run_filplot, d, wait=True, retries=1, resources={'MEMORY': 40e9})  # filplot and classify
-            d_bf = client.submit(T3_manager.run_burstfit, d_fp)  # burstfit model fit
-            d_vc = client.submit(T3_manager.run_voltagecopy, d_fp)  # copy voltages
-            d_h5 = client.submit(T3_manager.run_hdf5copy, d_fp)  # copy hdf5
-            d_fm = client.submit(T3_manager.run_fieldmscopy, d_fp)  # copy field image MS
-            d_hr = client.submit(T3_manager.run_hires, (d_bf, d_vc))  # create high resolution filterbank
-            d_cm = client.submit(T3_manager.run_candidatems, (d_bf, d_vc))  # make candidate image MS
-            d_po = client.submit(T3_manager.run_pol, d_hr)  # run pol analysis on hires filterbank
-            d_hb = client.submit(T3_manager.run_hiresburstfit, d_hr)  # run burstfit on hires filterbank
-            d_il = client.submit(T3_manager.run_imloc, d_cm)  # run image localization on candidate image MS
-            d_as = client.submit(T3_manager.run_astrometry, (d_fm, d_cm))  # astrometric burst image
-            fut = client.submit(T3_manager.run_final, (d_h5, d_po, d_hb, d_il, d_as))
+            d_fp = client.submit(T3_manager.run_filplot, d, wait=True, lock=LOCK, resources={'MEMORY': 40e9})  # filplot and classify
+            d_bf = client.submit(T3_manager.run_burstfit, d_fp, lock=LOCK)  # burstfit model fit
+            d_vc = client.submit(T3_manager.run_voltagecopy, d_fp, lock=LOCK)  # copy voltages
+            d_h5 = client.submit(T3_manager.run_hdf5copy, d_fp, lock=LOCK)  # copy hdf5
+            d_fm = client.submit(T3_manager.run_fieldmscopy, d_fp, lock=LOCK)  # copy field image MS
+            d_hr = client.submit(T3_manager.run_hires, (d_bf, d_vc), lock=LOCK)  # create high resolution filterbank
+            d_cm = client.submit(T3_manager.run_candidatems, (d_bf, d_vc), lock=LOCK)  # make candidate image MS
+            d_po = client.submit(T3_manager.run_pol, d_hr, lock=LOCK)  # run pol analysis on hires filterbank
+            d_hb = client.submit(T3_manager.run_hiresburstfit, d_hr, lock=LOCK)  # run burstfit on hires filterbank
+            d_il = client.submit(T3_manager.run_imloc, d_cm, lock=LOCK)  # run image localization on candidate image MS
+            d_as = client.submit(T3_manager.run_astrometry, (d_fm, d_cm), lock=LOCK)  # astrometric burst image
+            fut = client.submit(T3_manager.run_final, (d_h5, d_po, d_hb, d_il, d_as), lock=LOCK)
             tasks.append(fut)
             candnames.append(candname)        
 
