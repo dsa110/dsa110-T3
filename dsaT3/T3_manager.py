@@ -30,13 +30,14 @@ def run_filplot(a, wait=False):
     output_dict['trigname'] = list(a.keys())[0]
     fill_empty_dict(output_dict)
 
+    print('run_filplot on {0}'.format(output_dict['trigname']))
+    LOGGER.info('run_filplot on {0}'.format(output_dict['trigname']))
+
     # wait for specific filterbank file to be written
     ibeam = output_dict['ibeam'] + 1
     trigname = output_dict['trigname']
     filfile = f"{FILPATH}/{trigname}/{trigname}_{ibeam}.fil"
 
-    print(filfile)
-    LOGGER.info('Working on {0}'.format(output_dict['trigname']))
     if wait:
         found_filfile = wait_for_local_file(filfile,TIMEOUT_FIL)
     else:
@@ -73,15 +74,8 @@ def run_burstfit(dd):
     Returns new dictionary with refined DM, width, arrival time.
     """
 
-    update_dict(dd)
-
-    return dd.copy()
-
-
-def run_hires(dd):
-    """ Given candidate dictionary, create high time/freq filterbanks.
-    Returns new dictionary with new file locations?
-    """
+    print('run_burstfit on {0}'.format(dd['trigname']))
+    LOGGER.info('run_burstfit on {0}'.format(dd['trigname']))
 
     update_dict(dd)
 
@@ -92,6 +86,9 @@ def run_hdf5copy(d_fp):
     """ Given filplot candidate dictionary, copy hdf5 files
     """
 
+    print('run_hdf5copy on {0}'.format(d_fp['trigname']))
+    LOGGER.info('run_hdf5copy on {0}'.format(d_fp['trigname']))
+
     update_dict(d_fp)
     
     return d_fp.copy()
@@ -100,6 +97,9 @@ def run_hdf5copy(d_fp):
 def run_voltagecopy(d_fp):
     """ Given filplot candidate dictionary, copy voltage files
     """
+
+    print('run_voltagecopy on {0}'.format(d_fp'trigname']))
+    LOGGER.info('run_voltagecopy on {0}'.format(d_fp['trigname']))
 
     update_dict(d_fp)
     
@@ -112,6 +112,10 @@ def run_hires(dds):
 
     d_bf, d_vc = dds
     dd = d_bf.copy()
+
+    print('run_hires on {0}'.format(dd['trigname']))
+    LOGGER.info('run_hires on {0}'.format(dd['trigname']))
+
     dd.update(d_vc)
     
     update_dict(dd)
@@ -124,6 +128,9 @@ def run_pol(d_hr):
     Returns new dictionary with new file locations?
     """
 
+    print('run_pol on {0}'.format(d_hr['trigname']))
+    LOGGER.info('run_pol on {0}'.format(d_hr['trigname']))
+
     update_dict(d_hr)
     
     return d_hr.copy()
@@ -133,6 +140,9 @@ def run_fieldmscopy(d_fp):
     """ Given filplot candidate dictionary, copy field MS file.
     Returns new dictionary with new file locations.
     """
+
+    print('run_fieldmscopy on {0}'.format(d_fp['trigname']))
+    LOGGER.info('run_fieldmscopy on {0}'.format(d_fp['trigname']))
 
     update_dict(d_fp)
 
@@ -146,6 +156,10 @@ def run_candidatems(dds):
 
     d_bf, d_vc = dds
     dd = d_bf.copy()
+
+    print('run_candidatems on {0}'.format(dd['trigname']))
+    LOGGER.info('run_candidatems on {0}'.format(dd['trigname']))
+
     dd.update(d_vc)
 
     update_dict(dd)
@@ -153,21 +167,14 @@ def run_candidatems(dds):
     return dd
 
 
-def run_pol(d_hr):
-    """ Given hires candidate dictionary, run polarization analysis.
-    Returns new dictionary with new file locations.
-    """
-
-    update_dict(d_hr)
-
-    return d_hr.copy()
-
-
 def run_hiresburstfit(d_hr):
     """ Given hires candidate dictionary, run highres burstfit analysis.
     Returns new dictionary with new file locations.
     """
 
+    print('run_hiresburstfit on {0}'.format(d_hr['trigname']))
+    LOGGER.info('run_hiresburstfit on {0}'.format(d_hr['trigname']))
+
     update_dict(d_hr)
 
     return d_hr.copy()
@@ -177,14 +184,8 @@ def run_imloc(d_cm):
     """ Given candidate image MS, run image localization.
     """
 
-    update_dict(d_cm)
-
-    return d_cm.copy()
-
-
-def run_imloc(d_cm):
-    """ Given candidate image MS, run image localization.
-    """
+    print('run_imloc on {0}'.format(d_cm['trigname']))
+    LOGGER.info('run_imloc on {0}'.format(d_cm['trigname']))
 
     update_dict(d_cm)
 
@@ -197,6 +198,10 @@ def run_astrometry(dds):
 
     d_fm, d_cm = dds
     dd = d_fm.copy()
+
+    print('run_astrometry on {0}'.format(dd['trigname']))
+    LOGGER.info('run_astrometry on {0}'.format(dd['trigname']))
+
     dd.update(d_cm)
 
     update_dict(dd)
@@ -211,6 +216,10 @@ def run_final(dds):
 
     d_h5, d_po, d_hb, d_il, d_as = dds
     dd = d_h5.copy()
+
+    print('run_final on {0}'.format(dd['trigname']))
+    LOGGER.info('run_final on {0}'.format(dd['trigname']))
+
     dd.update(d_po)
     dd.update(d_hb)
     dd.update(d_il)
