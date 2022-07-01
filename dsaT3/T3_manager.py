@@ -236,7 +236,7 @@ def update_dict(dd, lock=LOCK):
 
     fn = OUTPUT_PATH + dd['trigname'] + '.json'
     print(f'locking during open/update/write of {fn}')
-    with lock:
+    with lock(timeout="5s"):
         if not os.path.exists(fn):
             with open(fn, 'w') as f:
                 json.dump(dd, f)
