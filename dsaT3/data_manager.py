@@ -5,6 +5,8 @@ from pathlib import Path
 from copy import deepcopy
 from itertools import chain
 import re
+import time
+import subprocess
 from astropy.time import Time
 import astropy.units as u
 from dsautils import cnf
@@ -17,8 +19,7 @@ class DataManager:
     operations_dir = Path("/dataz/dsa110/operations")
     candidates_dir = Path("/dataz/dsa110/candidates")
     candidates_subdirs = (
-        "Level3", "Level2/voltages", "Level2/filterbank",
-        "Level2/calibration", "other")
+        "Level3", "Level2/voltages", "Level2/filterbank", "Level2/calibration", "other")
     try:
         subband_corrnames = tuple(cnf.Conf().get('corr')['ch0'].keys())
     except:
@@ -29,27 +30,21 @@ class DataManager:
     directory_structure = MappingProxyType({
         'voltages':
             {
-                'target': (
-                    "{operations_dir}/T3/voltages/{hostname}_{candname}_"
-                    "data.out"),
+                'target': "/dataz/dsa110/T3/{hostname}_{candname}_data.out",
+                'target_scp': "ubuntu@{hostname}.sas.pvt:/home/ubuntu/data/{candname}_data.out",
                 'destination': (
-                    "{candidates_dir}/{candname}/Level2/voltages/{candname}_"
-                    "{subband}_data.out"),
+                    "{candidates_dir}/{candname}/Level2/voltages/{candname}_{subband}_data.out"),
             },
         'filterbank':
             {
-                'target': (
-                    "{operations_dir}/T1/{candname}/{candname}_"
-                    "{beamnumber}.fil"),
+                'target': "{operations_dir}/T1/{candname}/{candname}_{beamnumber}.fil",
                 'destination': (
-                    "{candidates_dir}/{candname}/Level2/filterbank/{candname}_"
-                    "{beamnumber}.fil"),
+                    "{candidates_dir}/{candname}/Level2/filterbank/{candname}_{beamnumber}.fil"),
             },
         'beamformer_weights':
             {
                 'target': "{operations_dir}/beamformer_weights/applied/",
-                'destination': (
-                    "{candidates_dir}/{candname}/Level2/calibration/")
+                'destination': "{candidates_dir}/{candname}/Level2/calibration/"
             },
         'hdf5_files':
             {
@@ -59,8 +54,7 @@ class DataManager:
         'T2_csv':
             {
                 'target': "{operations_dir}/T2/cluster_output.csv",
-                'destination': (
-                    "{candidates_dir}/{candname}/Level2/T2_{candname}.csv")
+                'destination': "{candidates_dir}/{candname}/Level2/T2_{candname}.csv"
             },
         'filplot_json':
             {
@@ -126,23 +120,53 @@ class DataManager:
         self.logger.info(
             f"Directory structure at {cand_dir} created for {self.candname}.")
 
-    def link_voltages(self) -> None:
+    def link_voltages(self, timeout_s: int = 60*60) -> None:
         """Link voltages to candidate directory."""
+        # TODO: dest can be in two different places, need to check both and scp over
+        # on the corr nodes in /home/ubuntu/data
+        # on h23 in /dataz/dsa110/T3
+        end_time = Time().now() + timeout_s * u.s
+        tsleep = timeout_s / 100
 
         self.logger.info(
             f"Linking voltages to candidate directory for {self.candname}.")
 
-        for subband, corrname in enumerate(self.subband_corrnames):
-            sourcepath = Path(
-                self.directory_structure['voltages']['target'].format(
-                    operations_dir=self.operations_dir, candname=self.candname,
-                    hostname=corrname))
-            destpath = Path(
-                self.directory_structure['voltages']['destination'].format(
-                    candidates_dir=self.candidates_dir, candname=self.candname,
-                    subband=f"sb{subband:02d}"))
-            self.link_file(sourcepath, destpath)
-            self.candparams[f'voltage_sb{subband:02d}'] = str(destpath)
+        found = [False] * len(self.subband_corrnames)
+
+        while not all(found):
+            if Time().now() < end_time:
+                raise FileNotFoundError(
+                    "Timeout waiting for voltage files to be written.")
+
+            for subband, corrname in enumerate(self.subband_corrnames):
+                if found[subband]:
+                    continue
+
+                destpath = Path(
+                    self.directory_structure['voltages']['destination'].format(
+                        candidates_dir=self.candidates_dir, candname=self.candname,
+                        subband=f"sb{subband:02d}"))
+                sourcepath = Path(
+                    self.directory_structure['voltages']['target'].format(
+                        hostname=corrname, candname=self.candname))
+                sourcepath_scp = self.directory_structure['voltages']['target_scp'].format(
+                    hostname=corrname, candname=self.candname)
+
+                if sourcepath.exists():
+                    self.link_file(sourcepath, destpath)
+                    found[subband] = True
+                else:
+                    try:
+                        self.scp_file(sourcepath_scp, destpath)
+                    except subprocess.CalledProcessError:
+                        pass
+                    else:
+                        found[subband] = True
+
+                if found[subband]:
+                    self.candparams[f'voltage_sb{subband:02d}'] = str(destpath)
+
+            time.sleep(tsleep)
 
         self.logger.info(f"Voltages linked for {self.candname}.")
 
@@ -160,13 +184,14 @@ class DataManager:
             destpath = Path(
                 self.directory_structure['filterbank']['destination'].format(
                     candidates_dir=self.candidates_dir, candname=self.candname,
-                    beamnumber=f"{beamnumber:03d}"))
+                    beamnumber=f"{beamnumber:03}"))
             self.link_file(sourcepath, destpath)
 
         self.candparams['filterbank'] = str(destpath.parent)
-        self.candparams['filfile_cand'] = self.directory_structure['filterbank']['destination'].format(
-            candidates_dir=self.candidates_dir, candname=self.candname,
-            beamnumber=f"{self.candparams['ibeam']+1:03d}")
+        self.candparams['filfile_cand'] = (
+            self.directory_structure['filterbank']['destination'].format(
+                candidates_dir=self.candidates_dir, candname=self.candname,
+                beamnumber=f"{self.candparams['ibeam']+1:03d}"))
         self.logger.info(f"Filterbank linked for {self.candname}.")
 
     def link_beamformer_weights(self) -> None:
@@ -208,7 +233,7 @@ class DataManager:
 
         self.logger.info(f"Beamformer weights linked for {self.candname}.")
 
-    def link_hdf5_files(self, hours_to_save: int = 2) -> None:
+    def link_hdf5_files(self, hours_to_save: float = 2., filelength_min: float = 5.) -> None:
         """Link hdf5 correlated data files to the candidates directory.
 
         Links all files within `hours_to_save`/2 hours of the candidate time.
@@ -217,9 +242,20 @@ class DataManager:
         ----------
         hours_to_save : int
             Number of hours to save around the candidate.
-        """
-        date_format = '%Y-%m-%d'
+        timeout_s : int
+            Timeout for files to appear in source directory in s.
 
+        Raises
+        ------
+        FileNotFoundError
+            If less than 93.75% of the expected number of files are found in the source directory.
+        """
+        # Wait until the time when the hdf5 files for all of `hours_to_save` should be there
+        target_time = self.candtime + hours_to_save / 2 * u.h + 10 * u.min
+        wait_until(target_time)
+
+        # Determine the dates and times for which to find files
+        date_format = '%Y-%m-%d'
         today = self.candtime.strftime(date_format)
         yesterday = (self.candtime - 1 * u.d).strftime(date_format)
         tomorrow = (self.candtime + 1 * u.d).strftime(date_format)
@@ -230,18 +266,21 @@ class DataManager:
             f"Linking HDF5 files for {hours_to_save} hours to candidate "
             f"directory for {self.candname}.")
 
+        # Construct an iterator over existing files that match the dates
         source_dir = self.operations_dir / "correlator"
         sourcepaths = chain(
             source_dir.glob(f"{today}*hdf5"),
             source_dir.glob(f"{yesterday}*hdf5"),
             source_dir.glob(f"{tomorrow}*hdf5"))
 
+        # Create a list that also match the times
         tokeep = []
         for sourcepath in sourcepaths:
             filetime = time_from_hdf5_filename(sourcepath)
             if within_times(start, stop, filetime):
                 tokeep.append(sourcepath)
 
+        # Hard link the files in `to_keep` to the candidate directory
         destpath = Path(
             self.directory_structure['hdf5_files']['destination'].format(
                 candidates_dir=self.candidates_dir, candname=self.candname))
@@ -250,6 +289,15 @@ class DataManager:
 
         self.logger.info(
             f"{len(tokeep)} hdf5 files linked for {self.candname}.")
+
+        # Check that the correct number of files were hardlinked
+        nfiles_expected = (
+            (hours_to_save * u.h / (filelength_min * u.min)
+             ).to_value(u.dimensionless_unscaled)
+            * len(self.subband_corrnames))
+        if len(tokeep) < nfiles_expected * 15 / 16:
+            raise FileNotFoundError(
+                f"Only {len(tokeep)} of {nfiles_expected} hdf5 files found.")
 
         self.candparams['hdf5_files'] = (
             self.directory_structure['hdf5_files']['destination'].format(
@@ -315,14 +363,38 @@ class DataManager:
             Path to link from.
         destpath : Path
             Path to link to.
+        timeout_s: int
+            Timeout in seconds.
         """
-        try:
-            sourcepath.link_to(destpath)
-        except FileExistsError:
+        if destpath.exists():
             self.logger.warning(
                 f"{destpath} already exists. Skipped linking {sourcepath}.")
-        else:
-            self.logger.info(f"Linked {sourcepath} to {destpath}.")
+            return
+
+        sourcepath.link_to(destpath)
+        self.logger.info(f"Linked {sourcepath} to {destpath}.")
+
+    def scp_file(self, sourcepath: str, destpath: Path) -> None:
+        """Copy `sourcepath` to `destpath` if `destpath` does not already exist.
+
+        Parameters
+        ----------
+        sourcepath : str
+            Path to copy from.
+        destpath : Path
+            Path to copy to.
+        timeout_s: int
+            Timeout in seconds.
+        """
+        if destpath.exists():
+            self.logger.warning(
+                f"{destpath} already exists. Skipped copying {sourcepath}.")
+            return
+
+        subprocess.run(
+            f"scp {sourcepath} {destpath}", shell=True, check=True)
+
+        self.logger.info(f"Copied {sourcepath} to {destpath}.")
 
 
 def within_times(start_time: Time, end_time: Time, time: Time) -> bool:
@@ -393,3 +465,11 @@ def find_beamformer_weights(candtime: Time, bfdir: Path) -> str:
             return avail_calib
 
     raise RuntimeError(f"No beamformer weights found for {candtime.isot}")
+
+
+def wait_until(target_time: Time) -> None:
+    """Sleep until `target_time`."""
+    current_time = Time.now()
+    seconds_to_wait = (target_time - current_time).to_value(u.s)
+    if seconds_to_wait > 0.:
+        time.sleep(seconds_to_wait)
