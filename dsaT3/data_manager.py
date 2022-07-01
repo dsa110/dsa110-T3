@@ -1,12 +1,14 @@
 """Data manager and related functions for managing Level 1 data in T3."""
-
-from types import MappingProxyType
-from pathlib import Path
 from copy import deepcopy
 from itertools import chain
+from pathlib import Path
 import re
-import time
+import shutil
 import subprocess
+import time
+from types import MappingProxyType
+from typing import Union
+
 from astropy.time import Time
 import astropy.units as u
 from dsautils import cnf
@@ -25,12 +27,13 @@ class DataManager:
     except:
         subband_corrnames = None
     nbeams = 256
+    voltage_dir = Path("/dataz/dsa110/T3")
 
     # Ensure read only since shared between instances
     directory_structure = MappingProxyType({
         'voltages':
             {
-                'target': "/dataz/dsa110/T3/{hostname}_{candname}_data.out",
+                'target': "{voltage_dir}/{hostname}/{candname}_data.out",
                 'target_scp': "ubuntu@{hostname}.sas.pvt:/home/ubuntu/data/{candname}_data.out",
                 'destination': (
                     "{candidates_dir}/{candname}/Level2/voltages/{candname}_{subband}_data.out"),
@@ -120,12 +123,9 @@ class DataManager:
         self.logger.info(
             f"Directory structure at {cand_dir} created for {self.candname}.")
 
-    def link_voltages(self, timeout_s: int = 60*60) -> None:
+    def copy_voltages(self, timeout_s: int = 60*60) -> None:
         """Link voltages to candidate directory."""
-        # TODO: dest can be in two different places, need to check both and scp over
-        # on the corr nodes in /home/ubuntu/data
-        # on h23 in /dataz/dsa110/T3
-        end_time = Time().now() + timeout_s * u.s
+        end_time = Time.now() + timeout_s * u.s
         tsleep = timeout_s / 100
 
         self.logger.info(
@@ -134,7 +134,7 @@ class DataManager:
         found = [False] * len(self.subband_corrnames)
 
         while not all(found):
-            if Time().now() < end_time:
+            if Time.now() > end_time:
                 raise FileNotFoundError(
                     "Timeout waiting for voltage files to be written.")
 
@@ -148,16 +148,16 @@ class DataManager:
                         subband=f"sb{subband:02d}"))
                 sourcepath = Path(
                     self.directory_structure['voltages']['target'].format(
-                        hostname=corrname, candname=self.candname))
+                        voltage_dir=self.voltage_dir, hostname=corrname, candname=self.candname))
                 sourcepath_scp = self.directory_structure['voltages']['target_scp'].format(
                     hostname=corrname, candname=self.candname)
 
                 if sourcepath.exists():
-                    self.link_file(sourcepath, destpath)
+                    self.copy_file(sourcepath, destpath, remote=False)
                     found[subband] = True
                 else:
                     try:
-                        self.scp_file(sourcepath_scp, destpath)
+                        self.copy_file(sourcepath_scp, destpath, remote=True)
                     except subprocess.CalledProcessError:
                         pass
                     else:
@@ -220,16 +220,15 @@ class DataManager:
 
         subband_pattern = re.compile(r'sb\d\d')
         for sourcepath in sourcepaths:
-            subband = subband_pattern.findall(sourcepath.name)
+            subband = subband_pattern.findall(sourcepath.name)[0]
             destpath = destdir / sourcepath.name
             self.link_file(sourcepath, destpath)
-            self.candparams[f'beamformer_weights_{subband}'] = destpath
+            self.candparams[f'beamformer_weights_{subband}'] = str(destpath)
 
-        sourcepath = beamformer_dir.glob(
-            f"beamformer_weights_{beamformer_name}*.yaml")
+        sourcepath = beamformer_dir / f"beamformer_weights_{beamformer_name}.yaml"
         destpath = destdir / sourcepath.name
         self.link_file(sourcepath, destpath)
-        self.candparams['beamformer_weights'] = destpath
+        self.candparams['beamformer_weights'] = str(destpath)
 
         self.logger.info(f"Beamformer weights linked for {self.candname}.")
 
@@ -344,7 +343,7 @@ class DataManager:
                 self.directory_structure[file]['target'].format(
                     operations_dir=self.operations_dir, candname=self.candname))
             destpath = Path(
-                self.directory_structure[file].format(
+                self.directory_structure[file]['destination'].format(
                     candidates_dir=self.candidates_dir, candname=self.candname))
             self.link_file(sourcepath, destpath)
 
@@ -374,7 +373,7 @@ class DataManager:
         sourcepath.link_to(destpath)
         self.logger.info(f"Linked {sourcepath} to {destpath}.")
 
-    def scp_file(self, sourcepath: str, destpath: Path) -> None:
+    def copy_file(self, sourcepath: Union[str, Path], destpath: Path, remote: bool) -> None:
         """Copy `sourcepath` to `destpath` if `destpath` does not already exist.
 
         Parameters
@@ -383,22 +382,23 @@ class DataManager:
             Path to copy from.
         destpath : Path
             Path to copy to.
-        timeout_s: int
-            Timeout in seconds.
         """
         if destpath.exists():
             self.logger.warning(
                 f"{destpath} already exists. Skipped copying {sourcepath}.")
             return
 
-        subprocess.run(
-            f"scp {sourcepath} {destpath}", shell=True, check=True)
+        if remote:
+            subprocess.run(
+                f"scp {sourcepath} {destpath}", shell=True, check=True)
+        else:
+            shutil.copy(str(sourcepath), str(destpath))
 
         self.logger.info(f"Copied {sourcepath} to {destpath}.")
 
 
-def within_times(start_time: Time, end_time: Time, time: Time) -> bool:
-    """Check if `time` is between `start_time` and `end_time`.
+def within_times(start_time: Time, end_time: Time, target_time: Time) -> bool:
+    """Check if `target_time` is between `start_time` and `end_time`.
 
     Parameters
     ----------
@@ -414,7 +414,7 @@ def within_times(start_time: Time, end_time: Time, time: Time) -> bool:
     bool
         True if `time` is between `start_time` and `end_time`.
     """
-    return start_time <= time <= end_time
+    return start_time <= target_time <= end_time
 
 
 def time_from_hdf5_filename(sourcepath: Path) -> Time:
