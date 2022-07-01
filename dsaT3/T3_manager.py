@@ -5,8 +5,9 @@ import dsautils.dsa_syslog as dsl
 from dsaT3 import filplot_funcs as filf
 import time, os
 import json
-from dask.distributed import Lock
+from dask.distributed import Lock, Client
 
+client = Client('10.42.0.232:8786')
 ds = dsa_store.DsaStore()
 LOCK = Lock()
 LOGGER = dsl.DsaSyslogger()
@@ -72,7 +73,7 @@ def run_burstfit(dd):
     Returns new dictionary with refined DM, width, arrival time.
     """
 
-    update_dict(output_dict)
+    update_dict(dd)
 
     return dd.copy()
 
@@ -82,7 +83,7 @@ def run_hires(dd):
     Returns new dictionary with new file locations?
     """
 
-    update_dict(output_dict)
+    update_dict(dd)
 
     return dd.copy()
 
@@ -91,7 +92,7 @@ def run_hdf5copy(d_fp):
     """ Given filplot candidate dictionary, copy hdf5 files
     """
 
-    update_dict(output_dict)
+    update_dict(d_fp)
     
     return d_fp.copy()
 
@@ -100,15 +101,16 @@ def run_voltagecopy(d_fp):
     """ Given filplot candidate dictionary, copy voltage files
     """
 
-    update_dict(output_dict)
+    update_dict(d_fp)
     
     return d_fp.copy()
 
 
-def run_hires(d_bf, d_vc):
+def run_hires(dds):
     """ Given burstfit and voltage dictionaries, generate hires filterbank files.
     """
 
+    d_bf, d_vc = dds
     dd = d_bf.copy()
     dd.update(d_vc)
     
@@ -137,11 +139,12 @@ def run_fieldmscopy(d_fp):
     return d_fp.copy()
 
 
-def run_candidatems(d_bf, d_vc):
+def run_candidatems(dds):
     """ Given filplot and voltage copy candidate dictionaries, make candidate MS image.
     Returns new dictionary with new file locations.
     """
 
+    d_bf, d_vc = dds
     dd = d_bf.copy()
     dd.update(d_vc)
 
@@ -188,10 +191,11 @@ def run_imloc(d_cm):
     return d_cm.copy()
 
 
-def run_astrometry(d_fm, d_cm):
+def run_astrometry(dds):
     """ Given field image MS and candidate image MS, run astrometric localization analysis.
     """
 
+    d_fm, d_cm = dds
     dd = d_fm.copy()
     dd.update(d_cm)
 
@@ -200,11 +204,12 @@ def run_astrometry(d_fm, d_cm):
     return dd
 
 
-def run_final(d_h5, d_po, d_hb, d_il):
+def run_final(dds):
     """ Token task to handle all final tasks in graph.
     May also update etcd to notify of completion.
     """
 
+    d_h5, d_po, d_hb, d_il, d_as = dds
     dd = d_h5.copy()
     dd.update(d_po)
     dd.update(d_hb)
@@ -220,9 +225,22 @@ def update_dict(dd, lock=LOCK):
     Uses trigname field to find file
     """
 
+    fn = OUTPUT_PATH + dd['trigname'] + '.json'
+    print(f'locking during open/update/write of {fn}')
     with lock:
-        with open(OUTPUT_PATH + dd['trigname'] + '.json', 'w') as f: #encoding='utf-8'                  
-            json.dump(output_dict, f, ensure_ascii=False, indent=4)
+        if not os.path.exists(fn):
+            with open(fn, 'w') as f:
+                json.dump(dd, f)
+        else:
+            try:
+                with open(fn, 'r') as f:
+                    extant_json = json.load(f)
+                    extant_json.update(dd)
+                    with open(fn, 'w') as f:
+                        json.dump(extant_json, f, ensure_ascii=False, indent=4)
+            except json.JSONDecodeError:
+                with open(fn, 'w') as f:
+                    json.dump(dd, f)
 
         
 def fill_empty_dict(od, emptyCorrs=True, correctCorrs=False):

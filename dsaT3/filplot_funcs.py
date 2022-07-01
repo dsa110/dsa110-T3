@@ -659,9 +659,8 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
         fake = False
     
     fnT2clust = f'{T2dir}/cluster_output.csv'
-    
+    fname = None
     if fllisting is None:
-
         flist = glob.glob(f"{os.path.join(T1dir, trigname)}/*.fil")
         flist.sort()
 
@@ -713,7 +712,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     figdirout = webPLOTDIR
     figname = figdirout+trigname+'.png'
 
-    print(f'before filplot: {fname}')
+    assert fname is not None, "Must set fname"
     not_real, prob = filplot(fname, dm, ibox, figname=figname,
                              ndm=ndm, suptitle=suptitle, heimsnr=snr,
                              ibeam=ibeam, rficlean=rficlean, 
