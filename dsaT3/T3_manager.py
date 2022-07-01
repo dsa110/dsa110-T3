@@ -3,6 +3,7 @@ import numpy as np
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
 from dsaT3 import filplot_funcs as filf
+from dsaT3 import data_manager
 import time, os
 import json
 from dask.distributed import Client
@@ -222,6 +223,10 @@ def run_final(dds, lock=None):
     dd.update(d_po)
     dd.update(d_hb)
     dd.update(d_il)
+
+    # do data management
+    dm = data_manager(dd)
+    dd = dm()
 
     update_json(dd, lock=lock)
 
