@@ -644,7 +644,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     """
 
     trigname = list(trigger_dict.keys())[0]
-#    trigname = trigger_dict['trigname']
+#    trigname = trigger_dict['trigname']  # need to restructure to use this for initial dict
     dm = trigger_dict[trigname]['dm']
     ibox = trigger_dict[trigname]['ibox']
     ibeam = trigger_dict[trigname]['ibeam'] + 1
@@ -683,9 +683,9 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
          fname = fllisting[ibeam]
 
     if toslack:
-        showplot=False
+        showplot = False
     else:
-        showplot=True
+        showplot = True
 
     # VR hack
     try:

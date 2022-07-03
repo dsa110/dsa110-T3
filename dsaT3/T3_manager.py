@@ -225,21 +225,19 @@ def run_final(dds, lock=None):
     dd.update(d_il)
 
     # do data management
-    dm = data_manager(dd)
+    dm = data_manager.DataManager(dd)
     dd = dm()
 
     update_json(dd, lock=lock)
-
     return dd
 
 
-def update_json(dd, lock):
+def update_json(dd, lock, outpath=OUTPUT_PATH):
     """ Lock, read, write, unlock json file on disk.
     Uses trigname field to find file
     """
 
-    fn = OUTPUT_PATH + dd['trigname'] + '.json'
-    print(f'locking during open/update/write of {fn}')
+    fn = outpath + dd['trigname'] + '.json'
 
     lock.acquire(timeout="5s")
     

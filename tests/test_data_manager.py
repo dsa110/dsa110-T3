@@ -11,6 +11,7 @@ from dsaT3.data_manager import (
 CANDPARAMS = {
     'trigname': 'test',
     'mjds': 57724.6234,
+    'ibeam': 1
 }
 BFWEIGHTS_OFFSETS_DAYS = np.arange(-7, 2)+0.5
 HDF5FILES_OFFSETS_HOURS = np.arange(-10, 10)+0.5
@@ -38,6 +39,7 @@ class FakeDataManager(DataManager):
 
         self.operations_dir = Path(f"{tmpdir}/operations")
         self.candidates_dir = Path(f"{tmpdir}/candidates")
+        self.voltage_dir = Path(f"{tmpdir}/T3")
         self.subband_corrnames = ('corr01', 'corr02', 'corr03')
         self.nbeams = 4
 
@@ -49,19 +51,16 @@ class FakeDataManager(DataManager):
         self.fake_beamformerweights_data()
         self.fake_hdf5_data()
         self.fake_T2_data()
+        self.fake_filplot_data()
 
     def fake_voltage_data(self):
-        voltage_dir = Path(
-            self.directory_structure['voltages']['target'].format(
-                operations_dir=self.operations_dir, hostname='corrXX',
-                candname=self.candname)).parent
-        if not voltage_dir.exists():
-            voltage_dir.mkdir(parents=True)
         for corr in self.subband_corrnames:
             voltage_path = Path(
                 self.directory_structure['voltages']['target'].format(
-                    operations_dir=self.operations_dir, hostname=corr,
+                    voltage_dir=self.voltage_dir, operations_dir=self.operations_dir, hostname=corr,
                     candname=self.candname))
+            if not voltage_path.parent.exists():
+                voltage_path.parent.mkdir(parents=True)
             voltage_path.touch()
 
     def fake_filterbank_data(self):
@@ -118,6 +117,16 @@ class FakeDataManager(DataManager):
             T2_path.parent.mkdir(parents=True)
         T2_path.touch()
 
+    def fake_filplot_data(self):
+        for file in ['filplot_json', 'filplot_png']:
+            filplot_path = Path(
+                self.directory_structure[file]['target'].format(
+                    operations_dir=self.operations_dir,
+                    candname=self.candname))
+            if not filplot_path.parent.exists():
+                filplot_path.parent.mkdir(parents=True)
+            filplot_path.touch()
+
 
 def test_datamanager_init(tmpdir):
     dm = FakeDataManager(CANDPARAMS, tmpdir)
@@ -164,11 +173,11 @@ def test_datamanager_create_directory_structure(tmpdir):
         assert (dm.candidates_dir / dm.candname / subdir).exists()
 
 
-def test_datamanager_link_voltages(tmpdir):
+def test_datamanager_copy_voltages(tmpdir):
     dm = FakeDataManager(CANDPARAMS, tmpdir)
     dm.create_directory_structure()
 
-    dm.link_voltages()
+    dm.copy_voltages()
 
     voltage_path = Path(
         dm.directory_structure['voltages']['destination'].format(
@@ -178,7 +187,7 @@ def test_datamanager_link_voltages(tmpdir):
                ) == len(dm.subband_corrnames)
 
     for sb in range(len(dm.subband_corrnames)):
-        assert isinstance(f'voltage_sb{sb:02d}', str)
+        assert isinstance(dm.candparams[f'voltage_sb{sb:02d}'], str)
 
 
 def test_datamanager_link_filterbank(tmpdir):
@@ -207,14 +216,15 @@ def test_datamanager_link_beamformer_weights(tmpdir):
     assert len(list(beamformer_path.glob('beamformer_weights*.dat'))
                ) == len(dm.subband_corrnames)
     assert len(list(beamformer_path.glob('beamformer_weights*.yaml'))) == 1
-    assert isinstance(dm.candparams["beamformer_weights"], list)
-    assert isinstance(dm.candparams["beamformer_weights"][0], str)
+    for subband in range(len(dm.subband_corrnames)):
+        assert isinstance(dm.candparams[f"beamformer_weights_sb{subband:02d}"], str)
+    assert isinstance(dm.candparams["beamformer_weights"], str)
 
 
 def test_datamanager_link_hdf5_files(tmpdir):
     dm = FakeDataManager(CANDPARAMS, tmpdir)
     dm.create_directory_structure()
-    dm.link_hdf5_files()
+    dm.link_hdf5_files(filelength_min=60.)
 
     hdf5_path = Path(
         dm.directory_structure['hdf5_files']['destination'].format(
@@ -241,6 +251,19 @@ def test_datamanager_link_T2csv(tmpdir):
         candidates_dir=dm.candidates_dir, candname=dm.candname))
     assert T2_path.exists()
     assert isinstance(dm.candparams["T2_csv"], str)
+
+
+def test_link_filplot_and_json(tmpdir):
+    dm = FakeDataManager(CANDPARAMS, tmpdir)
+    dm.create_directory_structure()
+
+    dm.link_filplot_and_json()
+
+    for file in ['filplot_json', 'filplot_png']:
+        filepath = Path(dm.directory_structure[file]['destination'].format(
+            candidates_dir=dm.candidates_dir, candname=dm.candname))
+        assert filepath.exists()
+    assert isinstance(dm.candparams['filplot_cand'], str)
 
 
 def test_datamanager_link_file(tmpdir):
