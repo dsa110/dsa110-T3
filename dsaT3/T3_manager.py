@@ -39,7 +39,7 @@ def run_filplot(a, wait=False, lock=None):
     filfile = f"{FILPATH}/{trigname}/{trigname}_{ibeam}.fil"
 
     if wait:
-        found_filfile = wait_for_local_file(filfile,TIMEOUT_FIL)
+        found_filfile = wait_for_local_file(filfile, TIMEOUT_FIL)
     else:
         found_filfile = filfile if os.path.exists(filfile) else None
     output_dict['filfile'] = found_filfile

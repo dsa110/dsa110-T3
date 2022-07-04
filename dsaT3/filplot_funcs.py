@@ -661,26 +661,30 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     fnT2clust = f'{T2dir}/cluster_output.csv'
     fname = None
     if fllisting is None:
-        flist = glob.glob(f"{os.path.join(T1dir, trigname)}/*.fil")
-        flist.sort()
+        flist0 = glob.glob(f"{os.path.join(T1dir, trigname)}/*.fil")
+        sortlambda = lambda fnfil: int(fnfil.strip('.fil').split('_')[-1])
 
-        beamindlist = []
+        flist = sorted(flist0, key=sortlambda)
 
-        for fnfil in flist:
-            beamno = int(fnfil.strip('.fil').split('_')[-1])
-            beamindlist.append(beamno)
-            if beamno==ibeam:
-                fname = fnfil
-        flist_=[]
+#        flist.sort()
+#        beamindlist = []
+#
+#        for fnfil in flist:
+#            beamno = int(fnfil.strip('.fil').split('_')[-1])
+#            beamindlist.append(beamno)
+#            if beamno==ibeam:
+#                fname = fnfil
+#        flist_=[]
 
-        # reorder the filename list in beam number
-        for ii in range(len(flist)):
-            flist_.append(flist[np.where(np.array(beamindlist)==ii)[0][0]])
-        flist = flist_
+#        # reorder the filename list in beam number
+#        for ii in range(len(flist)):
+#            flist_.append(flist[np.where(np.array(beamindlist)==ii)[0][0]])
+#        flist = flist_
 
     else:
          flist = fllisting
-         fname = fllisting[ibeam]
+
+    fname = fllisting[ibeam]
 
     if toslack:
         showplot = False
