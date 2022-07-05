@@ -661,10 +661,10 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     fnT2clust = f'{T2dir}/cluster_output.csv'
     fname = None
     if fllisting is None:
-        flist0 = glob.glob(f"{os.path.join(T1dir, trigname)}/*.fil")
+        flist = glob.glob(f"{os.path.join(T1dir, trigname)}/*.fil")
         sortlambda = lambda fnfil: int(fnfil.strip('.fil').split('_')[-1])
 
-        flist = sorted(flist0, key=sortlambda)
+        fllisting = sorted(flist, key=sortlambda)
 
 #        flist.sort()
 #        beamindlist = []
