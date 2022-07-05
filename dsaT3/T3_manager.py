@@ -38,6 +38,7 @@ def run_filplot(a, wait=False, lock=None):
     trigname = output_dict['trigname']
     filfile = f"{FILPATH}/{trigname}/{trigname}_{ibeam}.fil"
 
+    # TODO: should be obsolete. remove this and retest. 
     if wait:
         found_filfile = wait_for_local_file(filfile, TIMEOUT_FIL)
     else:
