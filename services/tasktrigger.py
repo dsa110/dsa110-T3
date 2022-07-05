@@ -65,10 +65,11 @@ while True:
         if candname not in candnames:
             print(f"Submitting task for candname {candname}")
             d_fp = client.submit(T3_manager.run_filplot, d, wait=True, lock=LOCK, resources={'MEMORY': 40e9})  # filplot and classify
+            d_cs = client.submit(T3_manager.run_createstructure, d_fp, lock=LOCK)  # burstfit model fit
             d_bf = client.submit(T3_manager.run_burstfit, d_fp, lock=LOCK)  # burstfit model fit
-            d_vc = client.submit(T3_manager.run_voltagecopy, d_fp, lock=LOCK)  # copy voltages
-            d_h5 = client.submit(T3_manager.run_hdf5copy, d_fp, lock=LOCK)  # copy hdf5
-            d_fm = client.submit(T3_manager.run_fieldmscopy, d_fp, lock=LOCK)  # copy field image MS
+            d_vc = client.submit(T3_manager.run_voltagecopy, d_cs, lock=LOCK)  # copy voltages
+            d_h5 = client.submit(T3_manager.run_hdf5copy, d_cs, lock=LOCK)  # copy hdf5
+            d_fm = client.submit(T3_manager.run_fieldmscopy, d_cs, lock=LOCK)  # copy field image MS
             d_hr = client.submit(T3_manager.run_hires, (d_bf, d_vc), lock=LOCK)  # create high resolution filterbank
             d_cm = client.submit(T3_manager.run_candidatems, (d_bf, d_vc), lock=LOCK)  # make candidate image MS
             d_po = client.submit(T3_manager.run_pol, d_hr, lock=LOCK)  # run pol analysis on hires filterbank
