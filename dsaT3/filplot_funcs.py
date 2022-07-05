@@ -11,7 +11,7 @@ from scipy import stats
 import numpy as np
 import matplotlib as mpl
 mpl.rcdefaults()
-#mpl.use('Agg') # hack
+mpl.use('Agg') # hack
 import matplotlib.pyplot as plt 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import json
@@ -26,6 +26,11 @@ import astropy.units as u
 from astropy.time import Time
 import dsautils.coordinates
 import dsautils.dsa_store as ds
+
+MLMODELPATH='/home/ubuntu/connor/MLmodel/20190501freq_time.hdf5' # Keras neural network model for Freq/Time array
+webPLOTDIR='/dataz/dsa110/operations/T3/'
+T1dir = '/dataz/dsa110/operations/T1'
+T2dir = '/dataz/dsa110/operations/T2/cluster_output'
 
 d = ds.DsaStore()
 
@@ -43,9 +48,6 @@ with open(slack_file) as sf_handler:
     slack_token = sf_handler.read()
     slack_client = slack.WebClient(token=slack_token)
 
-# Keras neural network model for Freq/Time array
-MLMODELPATH='/home/ubuntu/connor/MLmodel/20190501freq_time.hdf5'
-webPLOTDIR='/operations/T3/'
 
 plt.rcParams.update({
                     'font.size': 12,
@@ -642,14 +644,12 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     """
 
     trigname = list(trigger_dict.keys())[0]
+#    trigname = trigger_dict['trigname']  # need to restructure to use this for initial dict
     dm = trigger_dict[trigname]['dm']
     ibox = trigger_dict[trigname]['ibox']
     ibeam = trigger_dict[trigname]['ibeam'] + 1
     timehr = trigger_dict[trigname]['mjds']
     snr = trigger_dict[trigname]['snr']
-
-    T2dir = '/operations/T2/'
-    T1dir = '/operations/T1/'
 
     if '_inj' in trigname:
         fake = True
@@ -659,34 +659,37 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
         fake = False
     
     fnT2clust = f'{T2dir}/cluster_output.csv'
-    
+    fname = None
     if fllisting is None:
+        flist = glob.glob(f"{os.path.join(T1dir, trigname)}/*.fil")
+        sortlambda = lambda fnfil: int(fnfil.strip('.fil').split('_')[-1])
 
-        flist = glob.glob(f"{T1dir}/{trigname}/*.fil")
-        flist.sort()
+        fllisting = sorted(flist, key=sortlambda)
 
-        beamindlist = []
+#        flist.sort()
+#        beamindlist = []
+#
+#        for fnfil in flist:
+#            beamno = int(fnfil.strip('.fil').split('_')[-1])
+#            beamindlist.append(beamno)
+#            if beamno==ibeam:
+#                fname = fnfil
+#        flist_=[]
 
-        for fnfil in flist:
-            beamno = int(fnfil.strip('.fil').split('_')[-1])
-            beamindlist.append(beamno)
-            if beamno==ibeam:
-                fname = fnfil
-        flist_=[]
-
-        # reorder the filename list in beam number
-        for ii in range(len(flist)):
-            flist_.append(flist[np.where(np.array(beamindlist)==ii)[0][0]])
-        flist = flist_
+#        # reorder the filename list in beam number
+#        for ii in range(len(flist)):
+#            flist_.append(flist[np.where(np.array(beamindlist)==ii)[0][0]])
+#        flist = flist_
 
     else:
          flist = fllisting
-         fname = fllisting[ibeam]
+
+    fname = fllisting[ibeam]
 
     if toslack:
-        showplot=False
+        showplot = False
     else:
-        showplot=True
+        showplot = True
 
     # VR hack
     try:
@@ -712,7 +715,8 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
 
     figdirout = webPLOTDIR
     figname = figdirout+trigname+'.png'
-    
+
+    assert fname is not None, "Must set fname"
     not_real, prob = filplot(fname, dm, ibox, figname=figname,
                              ndm=ndm, suptitle=suptitle, heimsnr=snr,
                              ibeam=ibeam, rficlean=rficlean, 

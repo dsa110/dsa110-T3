@@ -3,9 +3,12 @@ import numpy as np
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
 from dsaT3 import filplot_funcs as filf
+from dsaT3 import data_manager
 import time, os
 import json
+from dask.distributed import Client
 
+client = Client('10.42.0.232:8786')
 ds = dsa_store.DsaStore()
 LOGGER = dsl.DsaSyslogger()
 LOGGER.subsystem("software")
@@ -13,14 +16,11 @@ LOGGER.app("dsaT3")
 LOGGER.function("T3_manager")
 
 TIMEOUT_FIL = 60
-TIMEOUT_CORR = 21600
 FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
-FIL_CORRS = ['corr01','corr02','corr09','corr13']
-TMPDIR = '/home/ubuntu/data/tmp/'
 
 
-def run_filplot(a, wait=False):
+def run_filplot(a, wait=False, lock=None):
     """ Given candidate dictionary, run filterbank analysis, plotting, and classification ("filplot").
     Returns dictionary with updated fields.
     """
@@ -30,15 +30,16 @@ def run_filplot(a, wait=False):
     output_dict['trigname'] = list(a.keys())[0]
     fill_empty_dict(output_dict)
 
+    print('run_filplot on {0}'.format(output_dict['trigname']))
+    LOGGER.info('run_filplot on {0}'.format(output_dict['trigname']))
+
     # wait for specific filterbank file to be written
     ibeam = output_dict['ibeam'] + 1
     trigname = output_dict['trigname']
     filfile = f"{FILPATH}/{trigname}/{trigname}_{ibeam}.fil"
 
-    print(filfile)
-    LOGGER.info('Working on {0}'.format(output_dict['trigname']))
     if wait:
-        found_filfile = wait_for_local_file(filfile,TIMEOUT_FIL)
+        found_filfile = wait_for_local_file(filfile, TIMEOUT_FIL)
     else:
         found_filfile = filfile if os.path.exists(filfile) else None
     output_dict['filfile'] = found_filfile
@@ -63,76 +64,199 @@ def run_filplot(a, wait=False):
 
         return output_dict
 
-    # write output_dict to disk
-    with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'                  
-        json.dump(output_dict, f, ensure_ascii=False, indent=4)
-
+    update_json(output_dict, lock=lock)
+    
     return output_dict
 
 
-def run_burstfit(dd):
+def run_burstfit(dd, lock=None):
     """ Given candidate dictionary, run burstfit analysis.
     Returns new dictionary with refined DM, width, arrival time.
     """
 
+    print('run_burstfit on {0}'.format(dd['trigname']))
+    LOGGER.info('run_burstfit on {0}'.format(dd['trigname']))
+
+    update_json(dd, lock=lock)
+
     return dd.copy()
 
 
-def run_hires(dd):
-    """ Given candidate dictionary, create high time/freq filterbanks.
+def run_hdf5copy(d_fp, lock=None):
+    """ Given filplot candidate dictionary, copy hdf5 files
+    """
+
+    print('run_hdf5copy on {0}'.format(d_fp['trigname']))
+    LOGGER.info('run_hdf5copy on {0}'.format(d_fp['trigname']))
+
+    update_json(d_fp, lock=lock)
+    
+    return d_fp.copy()
+
+
+def run_voltagecopy(d_fp, lock=None):
+    """ Given filplot candidate dictionary, copy voltage files
+    """
+
+    print('run_voltagecopy on {0}'.format(d_fp['trigname']))
+    LOGGER.info('run_voltagecopy on {0}'.format(d_fp['trigname']))
+
+    update_json(d_fp, lock=lock)
+    
+    return d_fp.copy()
+
+
+def run_hires(dds, lock=None):
+    """ Given burstfit and voltage dictionaries, generate hires filterbank files.
+    """
+
+    d_bf, d_vc = dds
+    dd = d_bf.copy()
+
+    print('run_hires on {0}'.format(dd['trigname']))
+    LOGGER.info('run_hires on {0}'.format(dd['trigname']))
+
+    dd.update(d_vc)
+    
+    update_json(dd, lock=lock)
+
+    return dd
+
+
+def run_pol(d_hr, lock=None):
+    """ Given hires candidate dictionary, run polarization analysis.
     Returns new dictionary with new file locations?
     """
 
-    return dd.copy()
+    print('run_pol on {0}'.format(d_hr['trigname']))
+    LOGGER.info('run_pol on {0}'.format(d_hr['trigname']))
+
+    update_json(d_hr, lock=lock)
+    
+    return d_hr.copy()
 
 
-def run_pol(dd):
-    """ Given candidate dictionary, run polarization analysis.
-    Returns new dictionary with new file locations?
+def run_fieldmscopy(d_fp, lock=None):
+    """ Given filplot candidate dictionary, copy field MS file.
+    Returns new dictionary with new file locations.
     """
 
-    return dd.copy()
+    print('run_fieldmscopy on {0}'.format(d_fp['trigname']))
+    LOGGER.info('run_fieldmscopy on {0}'.format(d_fp['trigname']))
+
+    update_json(d_fp, lock=lock)
+
+    return d_fp.copy()
 
 
-def make_filterbanks(od):
-    """ Uses cand dictionary to get set up filterbanks.
-    Returns list of file names.
+def run_candidatems(dds, lock=None):
+    """ Given filplot and voltage copy candidate dictionaries, make candidate MS image.
+    Returns new dictionary with new file locations.
     """
 
-    # corr nodes
-    corrs = ['corr03', 'corr04', 'corr05', 'corr06', 'corr07', 'corr08', 'corr10', 'corr11', 'corr12', 'corr14', 'corr15', 'corr16', 'corr18', 'corr19', 'corr21', 'corr22']
-    freqs=["1498.75", "1487.03125", "1475.3125", "1463.59375", "1451.875", "1440.15625", "1428.4375", "1416.71875", "1405.0", "1393.28125", "1381.5625", "1369.84375", "1358.125", "1346.40625", "1334.6875", "1322.96875"]
+    d_bf, d_vc = dds
+    dd = d_bf.copy()
 
-    arg_splicer = ''
+    print('run_candidatems on {0}'.format(dd['trigname']))
+    LOGGER.info('run_candidatems on {0}'.format(dd['trigname']))
+
+    dd.update(d_vc)
+
+    update_json(dd, lock=lock)
+
+    return dd
+
+
+def run_hiresburstfit(d_hr, lock=None):
+    """ Given hires candidate dictionary, run highres burstfit analysis.
+    Returns new dictionary with new file locations.
+    """
+
+    print('run_hiresburstfit on {0}'.format(d_hr['trigname']))
+    LOGGER.info('run_hiresburstfit on {0}'.format(d_hr['trigname']))
+
+    update_json(d_hr, lock=lock)
+
+    return d_hr.copy()
+
+
+def run_imloc(d_cm, lock=None):
+    """ Given candidate image MS, run image localization.
+    """
+
+    print('run_imloc on {0}'.format(d_cm['trigname']))
+    LOGGER.info('run_imloc on {0}'.format(d_cm['trigname']))
+
+    update_json(d_cm, lock=lock)
+
+    return d_cm.copy()
+
+
+def run_astrometry(dds, lock=None):
+    """ Given field image MS and candidate image MS, run astrometric localization analysis.
+    """
+
+    d_fm, d_cm = dds
+    dd = d_fm.copy()
+
+    print('run_astrometry on {0}'.format(dd['trigname']))
+    LOGGER.info('run_astrometry on {0}'.format(dd['trigname']))
+
+    dd.update(d_cm)
+
+    update_json(dd, lock=lock)
+
+    return dd
+
+
+def run_final(dds, lock=None):
+    """ Token task to handle all final tasks in graph.
+    May also update etcd to notify of completion.
+    """
+
+    d_h5, d_po, d_hb, d_il, d_as = dds
+    dd = d_h5.copy()
+
+    print('run_final on {0}'.format(dd['trigname']))
+    LOGGER.info('run_final on {0}'.format(dd['trigname']))
+
+    dd.update(d_po)
+    dd.update(d_hb)
+    dd.update(d_il)
+
+    # do data management
+    dm = data_manager.DataManager(dd)
+    dd = dm()
+
+    update_json(dd, lock=lock)
+    return dd
+
+
+def update_json(dd, lock, outpath=OUTPUT_PATH):
+    """ Lock, read, write, unlock json file on disk.
+    Uses trigname field to find file
+    """
+
+    fn = outpath + dd['trigname'] + '.json'
+
+    lock.acquire(timeout="5s")
     
-    # loop over corr nodes and run offline bf
-    for ci in np.arange(16):
+    if not os.path.exists(fn):
+        with open(fn, 'w') as f:
+            json.dump(dd, f, ensure_ascii=False, indent=4)
+    else:
+        try:
+            with open(fn, 'r') as f:
+                extant_json = json.load(f)
+                extant_json.update(dd)
+                with open(fn, 'w') as f:
+                    json.dump(extant_json, f, ensure_ascii=False, indent=4)
+        except json.JSONDecodeError:
+            with open(fn, 'w') as f:
+                json.dump(dd, f, ensure_ascii=False, indent=4)
 
-        if od[corrs[ci]+'_data'] is not None:
+    lock.release()
 
-            # copy calibrations file
-            os.system('scp '+corrs[ci]+'.sas.pvt:/home/ubuntu/proj/dsa110-shell/dsa110-xengine/utils/antennas.out '+TMPDIR+corrs[ci]+'.out')
-
-            # run offline beamformer
-            os.system('/home/ubuntu/proj/dsa110-shell/dsa110-xengine/src/dsaX_beamformer_offline -i '+od[corrs[ci]+'_data']+' -f '+TMPDIR+corrs[ci]+'.out -z '+freqs[ci]+' -a /home/ubuntu/vikram/process_voltages/flagants.dat')
-            os.system('mv '+TMPDIR+'output.dat '+TMPDIR+corrs[ci]+'_output.dat')
-
-            arg_splicer += ' '+TMPDIR+corrs[ci]+'_output.dat '
-
-        else:
-
-            arg_splicer += ' none '
-            
-    # run splicer
-    arg_splicer += ' ' + FILPATH + 'fil ' + od['trigname']
-    os.system('/home/ubuntu/proj/dsa110-shell/dsa110-xengine/src/splice_offline_beams '+arg_splicer)
-
-    flist = []
-    for i in np.arange(256):
-        flist.append(FILPATH + 'fil_' + od['trigname'] + '/'+od['trigname']+'_'+str(i)+'.fil')
-        
-    return flist
-    
 
 def fill_empty_dict(od, emptyCorrs=True, correctCorrs=False):
     """ Takes standard candidate dict, od, and resets entries to default values (e.g., None/False).
@@ -171,77 +295,5 @@ def wait_for_local_file(fl, timeout):
     time.sleep(10)
 
     return fl
-    
 
-# a is dict from voltage copy service
-def run_copied(a):
-
-    # set up output dict and datestring
-    datestring = ds.get_dict('/cnf/datestring')
-    output_dict = a[list(a.keys())[0]]
-    output_dict['trigname'] = list(a.keys())[0]
-    output_dict['datestring'] = datestring
-    fill_empty_dict(output_dict, emptyCorrs=False)
-
-    # make and merge filterbank files
-    flist = make_filterbanks(output_dict)
-    ibeam = output_dict['ibeam'] + 1
-    output_dict['filfile'] = FILPATH + datestring + '/fil_' + output_dict['trigname'] + '/' + output_dict['trigname'] +	'_' + str(ibeam) + '.fil'
-
-    # launch candplotter
-    try:
-        output_dict['candplot'] = filf.filplot_entry(datestring,a,fllisting=flist,rficlean=False)
-    except Exception as exception:
-        logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
-            output_dict['trigname'],
-            type(exception).__name__,
-            ''.join(
-                traceback.format_tb(exception.__traceback__)
-            )
-        )
-        print(logging_string)
-        LOGGER.error(logging_string)
-        #with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'
-        #    json.dump(output_dict, f, ensure_ascii=False, indent=4)
-
-        return output_dict
-
-    # wait for voltage files to be written
-    
-
-    # write output_dict to disk
-    with open(OUTPUT_PATH + output_dict['trigname'] + '.json', 'w') as f: #encoding='utf-8'                  
-        json.dump(output_dict, f, ensure_ascii=False, indent=4)
-
-    return output_dict
-
-# to scp files
-def copy(a,nrep=5):
-
-    # make dir
-    datestring = ds.get_dict('/cnf/datestring')
-    odir = "/media/ubuntu/ssd/T3/"+datestring+"/"
-    os.system("mkdir -p "+odir)
-
-    # scp file
-    corrname = a[list(a.keys())[0]]
-    b = a[list(a.keys())[1]]
-    output_dict = b[list(b.keys())[0]]
-    output_dict['trigname'] = list(b.keys())[0]
-    output_dict['datestring'] = datestring
-    output_dict['corrname'] = corrname
-
-    remote_loc = "/home/ubuntu/data/"+output_dict['trigname']+"_header.json"
-    local_loc = odir+corrname+"_"+output_dict['trigname']+"_header.json"
-    #cmd = "ssh "+corrname+".sas.pvt 'sudo loginctl enable-linger ubuntu; source ~/.bashrc; screen -d -m scp "+remote_loc+" 10.41.0.182:"+local_loc+"'"
-    cmd = "ssh "+corrname+".sas.pvt 'sudo loginctl enable-linger ubuntu; source ~/.bashrc; screen -d -m rsync --partial --timeout=20 -avz "+remote_loc+" 10.41.0.182:"+local_loc+"'"    
-    os.system(cmd)
-    
-    remote_loc = "/home/ubuntu/data/"+output_dict['trigname']+"_data.out"
-    local_loc = odir+corrname+"_"+output_dict['trigname']+"_data.out"
-    #cmd = "ssh "+corrname+".sas.pvt 'sudo loginctl enable-linger ubuntu; source ~/.bashrc; screen -d -m scp "+remote_loc+" 10.41.0.182:"+local_loc+"'"
-    cmd = "ssh "+corrname+".sas.pvt 'sudo loginctl enable-linger ubuntu; source ~/.bashrc; screen -L -d -m bash /home/ubuntu/proj/dsa110-shell/dsa110-xengine/scripts/run_rsync.bash "+remote_loc+" 10.41.0.182:"+local_loc+"'"
-    os.system(cmd)
-
-    return output_dict
 
