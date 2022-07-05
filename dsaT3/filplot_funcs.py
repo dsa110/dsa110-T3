@@ -93,7 +93,7 @@ def plotfour(dataft, datats, datadmt,
              datadm0=None, suptitle='', heimsnr=-1,
              ibox=1, ibeam=-1, prob=-1,
              showplot=True,multibeam_dm0ts=None,
-             fnT2clust=None,imjd=0.0,fake=False):
+             fnT2clust=None,imjd=0.0,injected=False):
     """ Plot a trigger's dynamics spectrum, 
         dm/time array, pulse profile, 
         multibeam info (optional), and zerodm (optional)
@@ -136,7 +136,7 @@ def plotfour(dataft, datats, datadmt,
     tarr = np.linspace(tmin, tmax, ntime)
     fig, axs = plt.subplots(3, 2, figsize=(8,10), constrained_layout=True)
 
-    if fake:
+    if injected:
         fig.patch.set_facecolor('red')
         fig.patch.set_alpha(0.5)
 
@@ -255,7 +255,7 @@ def plotfour(dataft, datats, datadmt,
         suptitle += ' (Probably not real)'
 
     fig.suptitle(suptitle, color='C1')
-    if fake:
+    if injected:
         fig.suptitle('INJECTION')
 
     if figname is not None:
@@ -549,7 +549,7 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
              ibeam=-1, rficlean=True, nfreq_plot=32, 
              classify=False, heim_raw_tres=1, 
              showplot=True, save_data=True, candname=None,
-             fnT2clust=None, imjd=0, fake=False):
+             fnT2clust=None, imjd=0, injected=False):
     """ Vizualize FRB candidates on DSA-110
     fn is filterbnak file name.
     dm is dispersion measure as float.
@@ -603,7 +603,7 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
                         ibox=ibox, ibeam=ibeam, prob=prob,
                         showplot=showplot,
                         multibeam_dm0ts=multibeam_dm0ts,fnT2clust=fnT2clust,imjd=imjd,
-                        fake=fake)
+                        injected=injected)
 
     return not_real, prob
 
@@ -650,13 +650,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     ibeam = trigger_dict[trigname]['ibeam'] + 1
     timehr = trigger_dict[trigname]['mjds']
     snr = trigger_dict[trigname]['snr']
-
-    if '_inj' in trigname:
-        fake = True
-        print("This burst was injected")
-    else:
-        print("Not injected")
-        fake = False
+    injected = trigger_dict[trigname]['injected']
     
     fnT2clust = f'{T2dir}/cluster_output.csv'
     fname = None
@@ -723,7 +717,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
                              nfreq_plot=nfreq_plot, classify=classify, showplot=showplot, 
                              multibeam=flist, heim_raw_tres=1, save_data=save_data,
                              candname=trigname, fnT2clust=fnT2clust, imjd=timehr,
-                             fake=fake)
+                             injected=injected)
     real = not not_real
 
     if toslack:

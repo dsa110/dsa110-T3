@@ -36,6 +36,19 @@ def run_filplot(a, wait=False, lock=None):
     # wait for specific filterbank file to be written
     ibeam = output_dict['ibeam'] + 1
     trigname = output_dict['trigname']
+
+    # TODO: get this from the dict set by T2, not from the name
+    if 'injected' not in output_dict:
+        if '_inj' in trigname:
+            output_dict['injected'] = True
+        else:
+            output_dict['injected'] = False
+
+    if output_dict['injected']:
+        print(f'Candidate {trigname} is an injection')
+    else:
+        print(f'Candidate {trigname} is not an injection')
+
     filfile = f"{FILPATH}/{trigname}/{trigname}_{ibeam}.fil"
 
     if wait:
@@ -69,6 +82,21 @@ def run_filplot(a, wait=False, lock=None):
     return output_dict
 
 
+def run_createstructure(dd, lock=None):
+    """ Given filplot results, decide on creating/copying files to candidate data area.
+    """
+
+    if dd['real'] and not dd['injected']:
+        print("Copying data for real/non-injection candidate.")
+        dm = data_manager.DataManager(dd)
+        dd = dm()
+    else:
+        print("Not copying data for non-astrophysical candidate.")
+
+    update_json(dd, lock=lock)
+    return dd
+
+
 def run_burstfit(dd, lock=None):
     """ Given candidate dictionary, run burstfit analysis.
     Returns new dictionary with refined DM, width, arrival time.
@@ -100,6 +128,10 @@ def run_voltagecopy(d_fp, lock=None):
 
     print('run_voltagecopy on {0}'.format(d_fp['trigname']))
     LOGGER.info('run_voltagecopy on {0}'.format(d_fp['trigname']))
+
+# TODO: implement via data manager
+    #dm = data_manager.DataManager(dd)
+    #dd = dm()
 
     update_json(d_fp, lock=lock)
     
@@ -224,11 +256,8 @@ def run_final(dds, lock=None):
     dd.update(d_hb)
     dd.update(d_il)
 
-    # do data management
-    dm = data_manager.DataManager(dd)
-    dd = dm()
-
     update_json(dd, lock=lock)
+
     return dd
 
 
