@@ -182,12 +182,10 @@ class DataManager:
             sourcepath = Path(
                 self.directory_structure['filterbank']['target'].format(
                     operations_dir=self.operations_dir, candname=self.candname,
-#                    beamnumber=f"{beamnumber:03d}"))
                     beamnumber=f"{beamnumber:d}"))
             destpath = Path(
                 self.directory_structure['filterbank']['destination'].format(
                     candidates_dir=self.candidates_dir, candname=self.candname,
-#                    beamnumber=f"{beamnumber:03d}"))
                     beamnumber=f"{beamnumber:d}"))
             self.link_file(sourcepath, destpath)
 
