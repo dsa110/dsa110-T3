@@ -125,17 +125,16 @@ def run_hdf5copy(d_fp, lock=None):
 def run_voltagecopy(d_fp, lock=None):
     """ Given filplot candidate dictionary, copy voltage files
     """
-
     print('run_voltagecopy on {0}'.format(d_fp['trigname']))
     LOGGER.info('run_voltagecopy on {0}'.format(d_fp['trigname']))
 
-# TODO: implement via data manager
-    #dm = data_manager.DataManager(dd)
-    #dd = dm()
+    dd = d_fp.copy()
+    dm = data_manager.DataManager(dd)
+    dd = dm.copy_voltages()
 
-    update_json(d_fp, lock=lock)
-    
-    return d_fp.copy()
+    update_json(dd, lock=lock)
+
+    return dd
 
 
 def run_hires(dds, lock=None):
@@ -149,7 +148,7 @@ def run_hires(dds, lock=None):
     LOGGER.info('run_hires on {0}'.format(dd['trigname']))
 
     dd.update(d_vc)
-    
+
     update_json(dd, lock=lock)
 
     return dd
