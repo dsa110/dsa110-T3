@@ -63,7 +63,7 @@ def run_filplot(a, wait=False, lock=None):
     
     # launch plot and classify
     try:
-        output_dict['candplot'], output_dict['probability'], output_dict['real'] = filf.filplot_entry(a, rficlean=False)
+        output_dict['candplot'], output_dict['probability'], output_dict['real'] = filf.filplot_entry(output_dict, rficlean=False)
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
             output_dict['trigname'],
