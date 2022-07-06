@@ -641,14 +641,22 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
         real event, as determined by classfication 
     """
 
-    trigname = list(trigger_dict.keys())[0]
-#    trigname = trigger_dict['trigname']  # need to restructure to use this for initial dict
-    dm = trigger_dict[trigname]['dm']
-    ibox = trigger_dict[trigname]['ibox']
-    ibeam = trigger_dict[trigname]['ibeam'] + 1
-    timehr = trigger_dict[trigname]['mjds']
-    snr = trigger_dict[trigname]['snr']
-    injected = trigger_dict[trigname]['injected']
+#     trigname = list(trigger_dict.keys())[0]
+# #      # need to restructure to use this for initial dict
+#     dm = trigger_dict[trigname]['dm']
+#     ibox = trigger_dict[trigname]['ibox']
+#     ibeam = trigger_dict[trigname]['ibeam'] + 1
+#     timehr = trigger_dict[trigname]['mjds']
+#     snr = trigger_dict[trigname]['snr']
+#     injected = trigger_dict[trigname]['injected']
+    
+    trigname = trigger_dict['trigname']
+    dm = trigger_dict['dm']
+    ibox = trigger_dict['ibox']
+    ibeam = trigger_dict['ibeam'] + 1
+    timehr = trigger_dict['mjds']
+    snr = trigger_dict['snr']
+    injected = trigger_dict['injected']
     
     fnT2clust = f'{T2dir}/cluster_output.csv'
     fname = None
