@@ -29,8 +29,8 @@ def run_filplot(a, wait=False, lock=None):
     output_dict = a.copy()
     fill_empty_dict(output_dict)
 
-    print('run_filplot on {0}'.format(output_dict['trigname']))
-    LOGGER.info('run_filplot on {0}'.format(output_dict['trigname']))
+    print('running filplot on {0}'.format(output_dict['trigname']))
+    LOGGER.info('running filplot on {0}'.format(output_dict['trigname']))
 
     # wait for specific filterbank file to be written
     ibeam = output_dict['ibeam'] + 1
@@ -87,11 +87,11 @@ def run_createstructure(dd, lock=None):
     """
 
     if dd['real'] and not dd['injected']:
-        print("Copying data for real/non-injection candidate.")
+        print("Running createstructure for real/non-injection candidate.")
         dm = data_manager.DataManager(dd)
         dd = dm()
     else:
-        print("Not copying data for non-astrophysical candidate.")
+        print("Not running createstructure for non-astrophysical candidate.")
 
     update_json(dd, lock=lock)
     return dd
@@ -102,8 +102,8 @@ def run_burstfit(dd, lock=None):
     Returns new dictionary with refined DM, width, arrival time.
     """
 
-    print('run_burstfit on {0}'.format(dd['trigname']))
-    LOGGER.info('run_burstfit on {0}'.format(dd['trigname']))
+    print('placeholder run_burstfit on {0}'.format(dd['trigname']))
+    LOGGER.info('placeholder run_burstfit on {0}'.format(dd['trigname']))
 
     update_json(dd, lock=lock)
 
@@ -114,8 +114,8 @@ def run_hdf5copy(d_fp, lock=None):
     """ Given filplot candidate dictionary, copy hdf5 files
     """
 
-    print('run_hdf5copy on {0}'.format(d_fp['trigname']))
-    LOGGER.info('run_hdf5copy on {0}'.format(d_fp['trigname']))
+    print('Running hdf5copy on {0}'.format(d_fp['trigname']))
+    LOGGER.info('Running hdf5copy on {0}'.format(d_fp['trigname']))
 
     dm = data_manager.DataManager(d_fp)
     dd = dm.link_hdf5_files()
@@ -128,8 +128,8 @@ def run_hdf5copy(d_fp, lock=None):
 def run_voltagecopy(d_fp, lock=None):
     """ Given filplot candidate dictionary, copy voltage files
     """
-    print('run_voltagecopy on {0}'.format(d_fp['trigname']))
-    LOGGER.info('run_voltagecopy on {0}'.format(d_fp['trigname']))
+    print('Running voltagecopy on {0}'.format(d_fp['trigname']))
+    LOGGER.info('Running voltagecopy on {0}'.format(d_fp['trigname']))
 
     dm = data_manager.DataManager(d_fp)
     dd = dm.copy_voltages()
@@ -146,8 +146,8 @@ def run_hires(dds, lock=None):
     d_bf, d_vc = dds
     dd = d_bf.copy()
 
-    print('run_hires on {0}'.format(dd['trigname']))
-    LOGGER.info('run_hires on {0}'.format(dd['trigname']))
+    print('placeholder run_hires on {0}'.format(dd['trigname']))
+    LOGGER.info('placeholder run_hires on {0}'.format(dd['trigname']))
 
     dd.update(d_vc)
 
@@ -161,8 +161,8 @@ def run_pol(d_hr, lock=None):
     Returns new dictionary with new file locations?
     """
 
-    print('run_pol on {0}'.format(d_hr['trigname']))
-    LOGGER.info('run_pol on {0}'.format(d_hr['trigname']))
+    print('placeholder nrun_pol on {0}'.format(d_hr['trigname']))
+    LOGGER.info('placeholder run_pol on {0}'.format(d_hr['trigname']))
 
     update_json(d_hr, lock=lock)
 
@@ -174,8 +174,8 @@ def run_fieldmscopy(d_fp, lock=None):
     Returns new dictionary with new file locations.
     """
 
-    print('run_fieldmscopy on {0}'.format(d_fp['trigname']))
-    LOGGER.info('run_fieldmscopy on {0}'.format(d_fp['trigname']))
+    print('placeholder run_fieldmscopy on {0}'.format(d_fp['trigname']))
+    LOGGER.info('placeholder run_fieldmscopy on {0}'.format(d_fp['trigname']))
 
     update_json(d_fp, lock=lock)
 
@@ -190,8 +190,8 @@ def run_candidatems(dds, lock=None):
     d_bf, d_vc = dds
     dd = d_bf.copy()
 
-    print('run_candidatems on {0}'.format(dd['trigname']))
-    LOGGER.info('run_candidatems on {0}'.format(dd['trigname']))
+    print('placeholder run_candidatems on {0}'.format(dd['trigname']))
+    LOGGER.info('placeholder run_candidatems on {0}'.format(dd['trigname']))
 
     dd.update(d_vc)
 
@@ -205,8 +205,8 @@ def run_hiresburstfit(d_hr, lock=None):
     Returns new dictionary with new file locations.
     """
 
-    print('run_hiresburstfit on {0}'.format(d_hr['trigname']))
-    LOGGER.info('run_hiresburstfit on {0}'.format(d_hr['trigname']))
+    print('placeholder run_hiresburstfit on {0}'.format(d_hr['trigname']))
+    LOGGER.info('placeholder run_hiresburstfit on {0}'.format(d_hr['trigname']))
 
     update_json(d_hr, lock=lock)
 
@@ -217,8 +217,8 @@ def run_imloc(d_cm, lock=None):
     """ Given candidate image MS, run image localization.
     """
 
-    print('run_imloc on {0}'.format(d_cm['trigname']))
-    LOGGER.info('run_imloc on {0}'.format(d_cm['trigname']))
+    print('placeholder run_imloc on {0}'.format(d_cm['trigname']))
+    LOGGER.info('placeholder run_imloc on {0}'.format(d_cm['trigname']))
 
     update_json(d_cm, lock=lock)
 
@@ -232,8 +232,8 @@ def run_astrometry(dds, lock=None):
     d_fm, d_cm = dds
     dd = d_fm.copy()
 
-    print('run_astrometry on {0}'.format(dd['trigname']))
-    LOGGER.info('run_astrometry on {0}'.format(dd['trigname']))
+    print('placeholder run_astrometry on {0}'.format(dd['trigname']))
+    LOGGER.info('placeholder run_astrometry on {0}'.format(dd['trigname']))
 
     dd.update(d_cm)
 
@@ -250,8 +250,8 @@ def run_final(dds, lock=None):
     d_h5, d_po, d_hb, d_il, d_as = dds
     dd = d_h5.copy()
 
-    print('run_final on {0}'.format(dd['trigname']))
-    LOGGER.info('run_final on {0}'.format(dd['trigname']))
+    print('Final merge of results for {0}'.format(dd['trigname']))
+    LOGGER.info('Final merge of results for {0}'.format(dd['trigname']))
 
     dd.update(d_po)
     dd.update(d_hb)
