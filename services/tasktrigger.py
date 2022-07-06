@@ -9,59 +9,26 @@ client = Client('10.42.0.232:8786')
 de = dsa_store.DsaStore()
 LOCK = Lock('update_json')
 
-
-tasks = []
-def cb_func(dd):
-    global tasks
-    corrname = dd['corrname']
-    trigger = dd['trigger']
-    if corrname == 'corr03':
-        res = client.submit(task, trigger)
-        tasks.append(res)
-
-def datestring_func():
-    def a(event):
-        global datestring
-        datestring = event
-    return a
-
-def docopy_func():
-    def a(event):
-        global docopy
-        global candnames
-        if event=='True':
-            docopy=True
-        if event=='False':
-            docopy=False
-            candnames = []
-    return a
-
-
-# add callbacks from etcd                                                                                
-docopy = de.get_dict('/cmd/corr/docopy') == 'True'
-datestring = de.get_dict('/cnf/datestring')
-de.add_watch('/cnf/datestring', datestring_func())
-de.add_watch('/cmd/corr/docopy', docopy_func())
-
 # work through candidates as they are written to disk
 candnames = []
+tasks = []
 
 while True:
     # get list of triggers in T2, but not in T3
-    trig_jsons = sorted(glob.glob(f'/dataz/dsa110/operations/T2/cluster_output/cluster_output*.json'))
+    trig_jsons = sorted(glob.glob('/dataz/dsa110/operations/T2/cluster_output/cluster_output*.json'))
     trig_candnames = [fl.split('/')[-1].lstrip('cluster_output').split('.')[0] for fl in trig_jsons]
-    t3_jsons = sorted(glob.glob(f'/dataz/dsa110/operations/T3/*.json'))
+    t3_jsons = sorted(glob.glob('/dataz/dsa110/operations/T3/*.json'))
     t3_candnames = [fl.split('/')[-1].split('.')[0] for fl in t3_jsons]
     trig_jsons = [fl for fl, cn in zip(trig_jsons, trig_candnames) if cn not in t3_candnames]
     print(f"Found {len(trig_jsons)} trigger jsons to process")
-    
+
     for fl in trig_jsons:
         with open(fl) as fp:
             d = json.load(fp)
         candname = list(d.keys())[0]  # format written by initial trigger
-#        candname = d['trigname']  # should write it this way for consistency downstream
+        d = d[candname]
+        d['trigname'] = candname
 
-#        if docopy is True:
         if candname not in candnames:
             print(f"Submitting task for candname {candname}")
             d_fp = client.submit(T3_manager.run_filplot, d, wait=True, lock=LOCK, resources={'MEMORY': 40e9})  # filplot and classify
@@ -78,7 +45,7 @@ while True:
             d_as = client.submit(T3_manager.run_astrometry, (d_fm, d_cm), lock=LOCK)  # astrometric burst image
             fut = client.submit(T3_manager.run_final, (d_h5, d_po, d_hb, d_il, d_as), lock=LOCK)
             tasks.append(fut)
-            candnames.append(candname)        
+            candnames.append(candname)       
 
     try:
         print(f'{len(tasks)} tasks in queue for candnames {candnames}')

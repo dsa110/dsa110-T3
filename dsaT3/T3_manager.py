@@ -26,8 +26,7 @@ def run_filplot(a, wait=False, lock=None):
     """
 
     # set up output dict and datestring
-    output_dict = a[list(a.keys())[0]]
-    output_dict['trigname'] = list(a.keys())[0]
+    output_dict = a.copy()
     fill_empty_dict(output_dict)
 
     print('run_filplot on {0}'.format(output_dict['trigname']))
@@ -165,7 +164,7 @@ def run_pol(d_hr, lock=None):
     LOGGER.info('run_pol on {0}'.format(d_hr['trigname']))
 
     update_json(d_hr, lock=lock)
-    
+
     return d_hr.copy()
 
 
