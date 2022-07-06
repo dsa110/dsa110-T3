@@ -75,7 +75,7 @@ def run_filplot(a, wait=False, lock=None):
         print(logging_string)
         LOGGER.error(logging_string)
 
-        return output_dict
+        output_dict['candplot'], output_dict['probability'], output_dict['real'] = None, None, None
 
     update_json(output_dict, lock=lock)
     
