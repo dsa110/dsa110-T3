@@ -578,7 +578,7 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
     
     if save_data:
         fnout = (fn.split('/')[-1]).strip('.fil') + '.hdf5'
-        fnout = '/home/ubuntu/connor/software/misc/data/MLtraining/' + fnout
+        fnout = '/dataz/dsa110/training/data/' + fnout
         
         paramsdict = {'dm' : dm, 'ibox' : ibox, 'ibeam' : ibeam,
                       'snr' : heimsnr}
