@@ -507,7 +507,8 @@ def generate_beam_time_arr(fl, ibeam=0, pre_rebin=1,
         beamno_arr.append(beamno)
 
 #        beam_time_arr[beamno, :] = datats
-        beam_time_arr[jj, :] = data_ftb 
+        beam_time_arr[beamno, :] = data_ftb        
+#        beam_time_arr[jj, :] = data_ftb 
 
     return beam_time_arr, multibeam_dm0ts, beamno_arr
 
