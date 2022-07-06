@@ -117,9 +117,12 @@ def run_hdf5copy(d_fp, lock=None):
     print('run_hdf5copy on {0}'.format(d_fp['trigname']))
     LOGGER.info('run_hdf5copy on {0}'.format(d_fp['trigname']))
 
-    update_json(d_fp, lock=lock)
+    dm = data_manager.DataManager(d_fp)
+    dd = dm.link_hdf5_files()
+
+    update_json(dd, lock=lock)
     
-    return d_fp.copy()
+    return dd
 
 
 def run_voltagecopy(d_fp, lock=None):
@@ -128,8 +131,7 @@ def run_voltagecopy(d_fp, lock=None):
     print('run_voltagecopy on {0}'.format(d_fp['trigname']))
     LOGGER.info('run_voltagecopy on {0}'.format(d_fp['trigname']))
 
-    dd = d_fp.copy()
-    dm = data_manager.DataManager(dd)
+    dm = data_manager.DataManager(d_fp)
     dd = dm.copy_voltages()
 
     update_json(dd, lock=lock)
