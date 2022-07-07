@@ -1,4 +1,4 @@
-import traceback
+simport traceback
 import numpy as np
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
@@ -105,7 +105,8 @@ def run_burstfit(dd, lock=None):
     print('placeholder run_burstfit on {0}'.format(dd['trigname']))
     LOGGER.info('placeholder run_burstfit on {0}'.format(dd['trigname']))
 
-    update_json(dd, lock=lock)
+    if dd['real'] and not dd['injected']:
+        update_json(dd, lock=lock)
 
     return dd.copy()
 
@@ -114,10 +115,10 @@ def run_hdf5copy(d_fp, lock=None):
     """ Given filplot candidate dictionary, copy hdf5 files
     """
 
-    print('Running hdf5copy on {0}'.format(d_fp['trigname']))
-    LOGGER.info('Running hdf5copy on {0}'.format(d_fp['trigname']))
-
     if d_fp['real'] and not d_fp['injected']:
+        print('Running hdf5copy on {0}'.format(d_fp['trigname']))
+        LOGGER.info('Running hdf5copy on {0}'.format(d_fp['trigname']))
+
         dm = data_manager.DataManager(d_fp)
         dd = dm.link_hdf5_files()
         update_json(dd, lock=lock)
@@ -129,10 +130,10 @@ def run_hdf5copy(d_fp, lock=None):
 def run_voltagecopy(d_fp, lock=None):
     """ Given filplot candidate dictionary, copy voltage files
     """
-    print('Running voltagecopy on {0}'.format(d_fp['trigname']))
-    LOGGER.info('Running voltagecopy on {0}'.format(d_fp['trigname']))
 
     if d_fp['real'] and not d_fp['injected']:    
+        print('Running voltagecopy on {0}'.format(d_fp['trigname']))
+        LOGGER.info('Running voltagecopy on {0}'.format(d_fp['trigname']))
         dm = data_manager.DataManager(d_fp)
         dd = dm.copy_voltages()
         update_json(dd, lock=lock)
@@ -151,6 +152,7 @@ def run_hires(dds, lock=None):
     print('placeholder run_hires on {0}'.format(dd['trigname']))
     LOGGER.info('placeholder run_hires on {0}'.format(dd['trigname']))
 
+#    if dd['real'] and not dd['injected']:
     dd.update(d_vc)
 
     update_json(dd, lock=lock)
@@ -166,6 +168,7 @@ def run_pol(d_hr, lock=None):
     print('placeholder nrun_pol on {0}'.format(d_hr['trigname']))
     LOGGER.info('placeholder run_pol on {0}'.format(d_hr['trigname']))
 
+#    if d_hr['real'] and not d_hr['injected']:
     update_json(d_hr, lock=lock)
 
     return d_hr.copy()
@@ -179,8 +182,12 @@ def run_fieldmscopy(d_fp, lock=None):
     print('placeholder run_fieldmscopy on {0}'.format(d_fp['trigname']))
     LOGGER.info('placeholder run_fieldmscopy on {0}'.format(d_fp['trigname']))
 
-    update_json(d_fp, lock=lock)
-
+#    if d_fp['real'] and not d_fp['injected']:
+#        dm = data_manager.DataManager(d_fp)
+#        dd = dm.link_field_ms()
+#        update_json(dd, lock=lock)
+#        return dd
+#    else:
     return d_fp.copy()
 
 
@@ -195,6 +202,7 @@ def run_candidatems(dds, lock=None):
     print('placeholder run_candidatems on {0}'.format(dd['trigname']))
     LOGGER.info('placeholder run_candidatems on {0}'.format(dd['trigname']))
 
+#    if dd['real'] and not dd['injected']:
     dd.update(d_vc)
 
     update_json(dd, lock=lock)
@@ -210,6 +218,7 @@ def run_hiresburstfit(d_hr, lock=None):
     print('placeholder run_hiresburstfit on {0}'.format(d_hr['trigname']))
     LOGGER.info('placeholder run_hiresburstfit on {0}'.format(d_hr['trigname']))
 
+#    if d_hr['real'] and not d_hr['injected']:
     update_json(d_hr, lock=lock)
 
     return d_hr.copy()
@@ -222,6 +231,7 @@ def run_imloc(d_cm, lock=None):
     print('placeholder run_imloc on {0}'.format(d_cm['trigname']))
     LOGGER.info('placeholder run_imloc on {0}'.format(d_cm['trigname']))
 
+#    if d_cm['real'] and not d_cm['injected']:
     update_json(d_cm, lock=lock)
 
     return d_cm.copy()
@@ -237,6 +247,7 @@ def run_astrometry(dds, lock=None):
     print('placeholder run_astrometry on {0}'.format(dd['trigname']))
     LOGGER.info('placeholder run_astrometry on {0}'.format(dd['trigname']))
 
+#    if dd['real'] and not dd['injected']:
     dd.update(d_cm)
 
     update_json(dd, lock=lock)
