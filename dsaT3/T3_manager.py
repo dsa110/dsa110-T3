@@ -1,4 +1,4 @@
-simport traceback
+import traceback
 import numpy as np
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
@@ -102,11 +102,17 @@ def run_burstfit(dd, lock=None):
     Returns new dictionary with refined DM, width, arrival time.
     """
 
-    print('placeholder run_burstfit on {0}'.format(dd['trigname']))
-    LOGGER.info('placeholder run_burstfit on {0}'.format(dd['trigname']))
+    from burstfit.BurstFit_paper_template import real_time_burstfit
 
-    if dd['real'] and not dd['injected']:
+    if dd['real']:
+        print('Running burstfit on {0}'.format(dd['trigname']))
+        LOGGER.info('Running burstfit on {0}'.format(dd['trigname']))
+        d_bf = real_time_burstfit(dd['trigname'], dd['filfile'], dd['snr'], dd['dm'], dd['ibox'])
+        dd.update(d_bf)
         update_json(dd, lock=lock)
+    else:
+        print('Not running burstfit on {0}'.format(dd['trigname']))
+        LOGGER.info('Not running burstfit on {0}'.format(dd['trigname']))
 
     return dd.copy()
 
@@ -275,14 +281,15 @@ def run_final(dds, lock=None):
     return dd
 
 
-def update_json(dd, lock, outpath=OUTPUT_PATH):
+def update_json(dd, lock=None, outpath=OUTPUT_PATH):
     """ Lock, read, write, unlock json file on disk.
     Uses trigname field to find file
     """
 
     fn = outpath + dd['trigname'] + '.json'
 
-    lock.acquire(timeout="5s")
+    if lock is not None:
+        lock.acquire(timeout="5s")
     
     if not os.path.exists(fn):
         with open(fn, 'w') as f:
@@ -298,7 +305,8 @@ def update_json(dd, lock, outpath=OUTPUT_PATH):
             with open(fn, 'w') as f:
                 json.dump(dd, f, ensure_ascii=False, indent=4)
 
-    lock.release()
+    if lock is not None:
+        lock.release()
 
 
 def fill_empty_dict(od, emptyCorrs=True, correctCorrs=False):
