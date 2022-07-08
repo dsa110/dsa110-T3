@@ -1,5 +1,6 @@
 import traceback
 import numpy as np
+import glob
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
 from dsaT3 import filplot_funcs as filf
@@ -15,7 +16,7 @@ LOGGER.subsystem("software")
 LOGGER.app("dsaT3")
 LOGGER.function("T3_manager")
 
-TIMEOUT_FIL = 60
+TIMEOUT_FIL = 600
 FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
 
@@ -50,15 +51,18 @@ def run_filplot(a, wait=False, lock=None):
 
     filfile = f"{FILPATH}/{trigname}/{trigname}_{ibeam}.fil"
 
-    # TODO: should be obsolete. remove this and retest. 
     if wait:
-        found_filfile = wait_for_local_file(filfile, TIMEOUT_FIL)
+        found_filfiles = wait_for_local_file(filfile, TIMEOUT_FIL, allbeams=True)
     else:
-        found_filfile = filfile if os.path.exists(filfile) else None
-    output_dict['filfile'] = found_filfile
-    
-    if found_filfile is None:
-        LOGGER.error('No filfile for {0}'.format(output_dict['trigname']))
+        found_filfiles = os.path.exists(filfile)
+
+    if found_filfiles:
+        output_dict['filfile'] = filfile
+    else:
+        logging_string = 'Timeout while waiting for {0} filfiles'.format(output_dict['trigname'])
+        LOGGER.error(logging_string)
+        filf.slack_client.chat_postMessage(channel='candidates', text=logging_string)
+        output_dict['candplot'], output_dict['probability'], output_dict['real'] = None, None, None
         return output_dict
     
     # launch plot and classify
@@ -76,6 +80,7 @@ def run_filplot(a, wait=False, lock=None):
         LOGGER.error(logging_string)
 
         output_dict['candplot'], output_dict['probability'], output_dict['real'] = None, None, None
+        filf.slack_client.chat_postMessage(channel='candidates', text=logging_string)
 
     update_json(output_dict, lock=lock)
     
@@ -330,20 +335,31 @@ def fill_empty_dict(od, emptyCorrs=True, correctCorrs=False):
                 od[corr+'_header'] = od[corr+'_header'][:-22]
         
 
-def wait_for_local_file(fl, timeout):
-    """ Wait for file named fl to be written.
+def wait_for_local_file(fl, timeout, allbeams=False):
+    """ Wait for file named fl to be written. fl can be string filename of list of filenames.
     If timeout (in seconds) exceeded, then return None.
+    allbeams will parse input (str) file name to get list of all beam file names.
     """
 
-    time_counter = 0
-    while not os.path.exists(fl):
-        time.sleep(1)
-        time_counter += 1
-        if time_counter > timeout:
-            return None
+    if allbeams:
+        assert isinstance(fl, str), 'Input should be detection beam fil file'
+        loc = os.path.dirname(fl)
+        fl0 = os.path.basename(fl.rstrip('.fil'))
+        fl1 = "_".join(fl0.split("_")[:-1])
+        fl = [f"{os.path.join(loc, fl1 + '_' + str(i) + '.fil')}" for i in range(256)]
+    
+    if isinstance(fl, str):
+        fl = [fl]
+    assert isinstance(fl, list), "name or list of fil files expected"
 
-    # wait in case file hasn't been written
-    time.sleep(10)
+    elapsed = 0
+    while not all([os.path.exists(ff) for ff in fl]):
+        time.sleep(5)
+        elapsed += 5
+        if elapsed > timeout:
+            return None
+        elif elapsed <= 5:
+            print(f"Waiting for files {fl}...")
 
     return fl
 

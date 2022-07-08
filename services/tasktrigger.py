@@ -31,9 +31,9 @@ while True:
 
         if candname not in candnames:
             print(f"Submitting task for candname {candname}")
-            d_fp = client.submit(T3_manager.run_filplot, d, wait=True, lock=LOCK, resources={'MEMORY': 40e9})  # filplot and classify
-            d_cs = client.submit(T3_manager.run_createstructure, d_fp, lock=LOCK)  # burstfit model fit
-            d_bf = client.submit(T3_manager.run_burstfit, d_fp, lock=LOCK)  # burstfit model fit
+            d_fp = client.submit(T3_manager.run_filplot, d, wait=True, lock=LOCK, resources={'MEMORY': 10e9}, priority=-1)  # filplot and classify
+            d_cs = client.submit(T3_manager.run_createstructure, d_fp, lock=LOCK, priority=1)  # burstfit model fit
+            d_bf = client.submit(T3_manager.run_burstfit, d_fp, lock=LOCK, priority=1)  # burstfit model fit
             d_vc = client.submit(T3_manager.run_voltagecopy, d_cs, lock=LOCK)  # copy voltages
             d_h5 = client.submit(T3_manager.run_hdf5copy, d_cs, lock=LOCK)  # copy hdf5
             d_fm = client.submit(T3_manager.run_fieldmscopy, d_cs, lock=LOCK)  # copy field image MS
@@ -53,10 +53,13 @@ while True:
             candnames = []
         for future in tasks:
             if future.done():
-                dd = future.result()
-                print(f'\tTask complete for {dd["trigname"]}')
-                tasks.remove(future)
-                candnames.remove(dd["trigname"])
+                if future.status == 'finished':
+                    dd = future.result()
+                    print(f'\tTask complete for {dd["trigname"]}')
+                    tasks.remove(future)
+                    candnames.remove(dd["trigname"])
+                else:
+                    print(f'\tTask {future} failed with status {future.status}')
 
         de.put_dict('/mon/service/T3manager',{'cadence': 5, 'time': dsa_functions36.current_mjd()})
         sleep(5)
