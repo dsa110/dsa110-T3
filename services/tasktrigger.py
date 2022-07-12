@@ -4,6 +4,7 @@ from dsautils import dsa_store
 from dsaT3 import T3_manager
 import glob, os, json
 from dsautils import dsa_functions36
+# from event import event
 
 client = Client('10.42.0.232:8786')
 de = dsa_store.DsaStore()
@@ -23,6 +24,7 @@ while True:
     print(f"Found {len(trig_jsons)} trigger jsons to process")
 
     for fl in trig_jsons:
+        # TODO: create DSAEvent here
         with open(fl) as fp:
             d = json.load(fp)
         candname = list(d.keys())[0]  # format written by initial trigger
