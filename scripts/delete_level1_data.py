@@ -24,4 +24,4 @@ for subdir, pattern in subdirs_to_clear:
         modtime = modtime.replace(tzinfo=cutoff.tzinfo)
         if modtime < cutoff:
             print(f'Removing {file}')
-            # file.unlink()
+            file.unlink()
