@@ -2,21 +2,16 @@
 # liam.dean.connor@gmail.com & ghellbourg@astro.caltech.edu
 # 25/02/2021
 
-import os
 import os.path
-import sys
-
-import scipy.signal
-from scipy import stats
+import glob
 import numpy as np
+import matplotlib.pyplot as plt 
 import matplotlib as mpl
 mpl.rcdefaults()
 mpl.use('Agg') # hack
-import matplotlib.pyplot as plt 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-import json
-import glob
-import optparse
+import scipy.signal
+from scipy import stats
 import pandas
 import h5py
 

@@ -21,6 +21,7 @@ FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
 
 
+# TODO: change all run_* functions to take DSAEvent as input
 def run_filplot(a, wait=False, lock=None):
     """ Given candidate dictionary, run filterbank analysis, plotting, and classification ("filplot").
     Returns dictionary with updated fields.
@@ -285,7 +286,7 @@ def run_final(dds, lock=None):
 
     return dd
 
-
+# TODO: this may become method of DSAEvent
 def update_json(dd, lock=None, outpath=OUTPUT_PATH):
     """ Lock, read, write, unlock json file on disk.
     Uses trigname field to find file
@@ -314,6 +315,7 @@ def update_json(dd, lock=None, outpath=OUTPUT_PATH):
         lock.release()
 
 
+# TODO: this may be obsolete after DSAEvent restructuring
 def fill_empty_dict(od, emptyCorrs=True, correctCorrs=False):
     """ Takes standard candidate dict, od, and resets entries to default values (e.g., None/False).
     """
@@ -362,5 +364,3 @@ def wait_for_local_file(fl, timeout, allbeams=False):
             print(f"Waiting for files {fl}...")
 
     return fl
-
-
