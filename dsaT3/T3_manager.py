@@ -132,9 +132,9 @@ def run_hdf5copy(d_fp, lock=None):
         LOGGER.info('Running hdf5copy on {0}'.format(d_fp['trigname']))
 
         dm = data_manager.DataManager(d_fp)
-        dd = dm.link_hdf5_files()
-        update_json(dd, lock=lock)
-        return dd
+        dm.link_hdf5_files()
+        update_json(dm.candparams, lock=lock)
+        return dm.candparams
     else:
         return d_fp.copy()
 
@@ -147,9 +147,9 @@ def run_voltagecopy(d_fp, lock=None):
         print('Running voltagecopy on {0}'.format(d_fp['trigname']))
         LOGGER.info('Running voltagecopy on {0}'.format(d_fp['trigname']))
         dm = data_manager.DataManager(d_fp)
-        dd = dm.copy_voltages()
-        update_json(dd, lock=lock)
-        return dd
+        dm.copy_voltages()
+        update_json(dm.candparams, lock=lock)
+        return dm.candparams
     else:
         return d_fp
 
@@ -196,9 +196,9 @@ def run_fieldmscopy(d_fp, lock=None):
 
 #    if d_fp['real'] and not d_fp['injected']:
 #        dm = data_manager.DataManager(d_fp)
-#        dd = dm.link_field_ms()
-#        update_json(dd, lock=lock)
-#        return dd
+#        dm.link_field_ms()
+#        update_json(dm.candparams, lock=lock)
+#        return dm.candparams
 #    else:
     return d_fp.copy()
 

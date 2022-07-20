@@ -103,7 +103,7 @@ class DataManager:
         self.create_directory_structure()
         self.link_filterbank()
         self.link_beamformer_weights()
-        self.link_T2_csv()
+        self.copy_T2_csv()
         self.link_filplot_and_json()
 
         return self.candparams
@@ -125,6 +125,7 @@ class DataManager:
 
     def copy_voltages(self, timeout_s: int = 60*60) -> None:
         """Link voltages to candidate directory."""
+
         end_time = Time.now() + timeout_s * u.s
         tsleep = timeout_s / 100
 
@@ -316,11 +317,11 @@ class DataManager:
         """
         raise NotImplementedError
 
-    def link_T2_csv(self):
-        """Link the T2 csv file to the candidates directory."""
+    def copy_T2_csv(self):
+        """Copy the T2 csv file to the candidates directory."""
 
         self.logger.info(
-            f"Linking T2 csv to candidate directory for {self.candname}.")
+            f"Copying T2 csv to candidate directory for {self.candname}.")
 
         sourcepath = Path(
             self.directory_structure['T2_csv']['target'].format(
@@ -328,7 +329,10 @@ class DataManager:
         destpath = Path(
             self.directory_structure['T2_csv']['destination'].format(
                 candidates_dir=self.candidates_dir, candname=self.candname))
-        self.link_file(sourcepath, destpath)
+
+        # TODO: create sourcepath to file of last two days of T2 csv
+        self.copy_file(sourcepath, destpath, remote=False)
+
         self.candparams['T2_csv'] = str(destpath)
 
         self.logger.info(
