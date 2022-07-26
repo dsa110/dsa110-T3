@@ -186,7 +186,7 @@ def plotfour(dataft, datats, datadmt,
                                 width="25%", # width = 30% of parent_bbox
                                 height="25%", # height : 1 inch
                                 loc=4)
-        small_axes.imshow(beam_time_arr[::-1][ibeam-4:ibeam+4],
+        small_axes.imshow(beam_time_arr[ibeam-4:ibeam+4][::-1],
                           aspect='auto',
                           extent=[tmin, tmax, ibeam-4, ibeam+4],
                           interpolation='nearest', cmap='afmhot')
