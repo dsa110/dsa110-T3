@@ -4,7 +4,7 @@ from dsautils import dsa_store
 from dsaT3 import T3_manager
 import glob, os, json
 from dsautils import dsa_functions36
-# from event import event
+from event import event
 
 client = Client('10.42.0.232:8786')
 de = dsa_store.DsaStore()
@@ -24,15 +24,10 @@ while True:
     print(f"Found {len(trig_jsons)} trigger jsons to process")
 
     for fl in trig_jsons:
-        # TODO: create DSAEvent here
-        with open(fl) as fp:
-            d = json.load(fp)
-        candname = list(d.keys())[0]  # format written by initial trigger
-        d = d[candname]
-        d['trigname'] = candname
+        d = event.create_event(fl)
 
-        if candname not in candnames:
-            print(f"Submitting task for candname {candname}")
+        if d.trigname not in candnames:
+            print(f"Submitting task for trigname {d.trigname}")
             d_fp = client.submit(T3_manager.run_filplot, d, wait=True, lock=LOCK, resources={'MEMORY': 10e9}, priority=-1)  # filplot and classify
             d_cs = client.submit(T3_manager.run_createstructure, d_fp, lock=LOCK, priority=1)  # burstfit model fit
             d_bf = client.submit(T3_manager.run_burstfit, d_fp, lock=LOCK, priority=1)  # burstfit model fit
@@ -47,7 +42,7 @@ while True:
             d_as = client.submit(T3_manager.run_astrometry, (d_fm, d_cm), lock=LOCK)  # astrometric burst image
             fut = client.submit(T3_manager.run_final, (d_h5, d_po, d_hb, d_il, d_as), lock=LOCK)
             tasks.append(fut)
-            candnames.append(candname)       
+            candnames.append(d.trigname)
 
     try:
         print(f'{len(tasks)} tasks in queue for candnames {candnames}')
@@ -56,10 +51,10 @@ while True:
         for future in tasks:
             if future.done():
                 if future.status == 'finished':
-                    dd = future.result()
-                    print(f'\tTask complete for {dd["trigname"]}')
+                    d = future.result()
+                    print(f'\tTask complete for {d.trigname}')
                     tasks.remove(future)
-                    candnames.remove(dd["trigname"])
+                    candnames.remove(d.trigname)
                 else:
                     print(f'\tTask {future} failed with status {future.status}')
 
