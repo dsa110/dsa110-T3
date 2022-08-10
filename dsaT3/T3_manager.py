@@ -1,27 +1,30 @@
 import traceback
 import numpy as np
-from dsautils import dsa_store
-import dsautils.dsa_syslog as dsl
-from dsaT3 import filplot_funcs as filf
-from dsaT3 import data_manager
+#from dsautils import dsa_store
+#import dsautils.dsa_syslog as dsl
+from T3 import filplot_funcs as filf
+from T3 import data_manager
 import time, os
 import json
 from dask.distributed import Client
 
-client = Client('10.42.0.232:8786')
-ds = dsa_store.DsaStore()
-LOGGER = dsl.DsaSyslogger()
-LOGGER.subsystem("software")
-LOGGER.app("dsaT3")
-LOGGER.function("T3_manager")
+import logging as LOGGER
+logger.basicConfig(filename='logs/output.log',
+                    encoding='utf-8',
+                    level=logger.DEBUG)
+
+client = Client('12.0.0.1:8786')
+#ds = dsa_store.DsaStore()
 
 TIMEOUT_FIL = 60
-FILPATH = '/dataz/dsa110/operations/T1/'
-OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
+FILPATH = '/home/liam/grexdata/'
+OUTPUT_PATH = '/home/liam/grexdata/output'
 
 
 def run_filplot(a, wait=False, lock=None):
-    """ Given candidate dictionary, run filterbank analysis, plotting, and classification ("filplot").
+    """ Given candidate dictionary, 
+    run filterbank analysis, 
+    plotting, and classification ("filplot").
     Returns dictionary with updated fields.
     """
 
