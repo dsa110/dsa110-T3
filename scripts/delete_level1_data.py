@@ -9,6 +9,8 @@ subdirs_to_clear = [
     ("T1", "*/*.fil"),
     ("T2/cluster_output", "*.cand"),
     ("T2/cluster_output", "*.json"),
+    ("T3", "*.png"),
+    ("T3", "*.json"),
 ]
 
 cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=7)
