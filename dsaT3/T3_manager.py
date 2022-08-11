@@ -91,7 +91,9 @@ def run_createstructure(d, lock=None):
 
         # TODO: have DataManager parse DSACand
         dm = data_manager.DataManager(d.__dict__)
-        dd = dm()
+        # TODO: have update method accept dict or DSACand
+        d.__dict__.update(dm())
+
     else:
         print("Not running createstructure for non-astrophysical candidate.")
 
@@ -99,7 +101,7 @@ def run_createstructure(d, lock=None):
     return d
 
 
-def run_burstfit(dd, lock=None):
+def run_burstfit(d, lock=None):
     """ Given candidate dictionary, run burstfit analysis.
     Returns new dictionary with refined DM, width, arrival time.
     """
@@ -157,11 +159,11 @@ def run_voltagecopy(d, lock=None):
     return d
 
 
-def run_hires(dds, lock=None):
+def run_hires(ds, lock=None):
     """ Given DSACand objects from burstfit and voltage, generate hires filterbank files.
     """
 
-    d, d_vc = dds
+    d, d_vc = ds
     d.update(d_vc)
 
     print('placeholder run_hires on {0}'.format(d.trigname))
@@ -204,12 +206,12 @@ def run_fieldmscopy(d, lock=None):
     return d
 
 
-def run_candidatems(dds, lock=None):
+def run_candidatems(ds, lock=None):
     """ Given DSACands from filplot and voltage copy, make candidate MS image.
     Returns updated DSACand with new file locations.
     """
 
-    d, d_vc = dds
+    d, d_vc = ds
     d.update(d_vc)
 
     print('placeholder run_candidatems on {0}'.format(d.trigname))
@@ -249,11 +251,11 @@ def run_imloc(d, lock=None):
     return d
 
 
-def run_astrometry(dds, lock=None):
+def run_astrometry(ds, lock=None):
     """ Given field image MS and candidate image MS, run astrometric localization analysis.
     """
 
-    d, d_cm = dds
+    d, d_cm = ds
     d.update(d_cm)
 
     print('placeholder run_astrometry on {0}'.format(d.trigname))
@@ -266,12 +268,12 @@ def run_astrometry(dds, lock=None):
     return d
 
 
-def run_final(dds, lock=None):
+def run_final(ds, lock=None):
     """ Reduction task to handle all final tasks in graph.
     May also update etcd to notify of completion.
     """
 
-    d, d_po, d_hb, d_il, d_as = dds
+    d, d_po, d_hb, d_il, d_as = ds
     d.update(d_po)
     d.update(d_hb)
     d.update(d_il)
