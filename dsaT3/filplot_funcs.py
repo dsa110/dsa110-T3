@@ -2,21 +2,16 @@
 # liam.dean.connor@gmail.com & ghellbourg@astro.caltech.edu
 # 25/02/2021
 
-import os
 import os.path
-import sys
-
-import scipy.signal
-from scipy import stats
+import glob
 import numpy as np
+import matplotlib.pyplot as plt 
 import matplotlib as mpl
 mpl.rcdefaults()
 mpl.use('Agg') # hack
-import matplotlib.pyplot as plt 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-import json
-import glob
-import optparse
+import scipy.signal
+from scipy import stats
 import pandas
 import h5py
 
@@ -93,7 +88,7 @@ def plotfour(dataft, datats, datadmt,
              datadm0=None, suptitle='', heimsnr=-1,
              ibox=1, ibeam=-1, prob=-1,
              showplot=True,multibeam_dm0ts=None,
-             fnT2clust=None,imjd=0.0,fake=False):
+             fnT2clust=None,imjd=0.0,injected=False):
     """ Plot a trigger's dynamics spectrum, 
         dm/time array, pulse profile, 
         multibeam info (optional), and zerodm (optional)
@@ -136,7 +131,7 @@ def plotfour(dataft, datats, datadmt,
     tarr = np.linspace(tmin, tmax, ntime)
     fig, axs = plt.subplots(3, 2, figsize=(8,10), constrained_layout=True)
 
-    if fake:
+    if injected:
         fig.patch.set_facecolor('red')
         fig.patch.set_alpha(0.5)
 
@@ -191,7 +186,7 @@ def plotfour(dataft, datats, datadmt,
                                 width="25%", # width = 30% of parent_bbox
                                 height="25%", # height : 1 inch
                                 loc=4)
-        small_axes.imshow(beam_time_arr[::-1][ibeam-4:ibeam+4],
+        small_axes.imshow(beam_time_arr[ibeam-4:ibeam+4][::-1],
                           aspect='auto',
                           extent=[tmin, tmax, ibeam-4, ibeam+4],
                           interpolation='nearest', cmap='afmhot')
@@ -255,7 +250,7 @@ def plotfour(dataft, datats, datadmt,
         suptitle += ' (Probably not real)'
 
     fig.suptitle(suptitle, color='C1')
-    if fake:
+    if injected:
         fig.suptitle('INJECTION')
 
     if figname is not None:
@@ -506,8 +501,7 @@ def generate_beam_time_arr(fl, ibeam=0, pre_rebin=1,
         datats /= sigts
         beamno_arr.append(beamno)
 
-#        beam_time_arr[beamno, :] = datats
-        beam_time_arr[jj, :] = data_ftb 
+        beam_time_arr[beamno, :] = data_ftb        
 
     return beam_time_arr, multibeam_dm0ts, beamno_arr
 
@@ -549,7 +543,7 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
              ibeam=-1, rficlean=True, nfreq_plot=32, 
              classify=False, heim_raw_tres=1, 
              showplot=True, save_data=True, candname=None,
-             fnT2clust=None, imjd=0, fake=False):
+             fnT2clust=None, imjd=0, injected=False):
     """ Vizualize FRB candidates on DSA-110
     fn is filterbnak file name.
     dm is dispersion measure as float.
@@ -579,7 +573,7 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
     
     if save_data:
         fnout = (fn.split('/')[-1]).strip('.fil') + '.hdf5'
-        fnout = '/home/ubuntu/connor/software/misc/data/MLtraining/' + fnout
+        fnout = '/dataz/dsa110/training/data/' + fnout
         
         paramsdict = {'dm' : dm, 'ibox' : ibox, 'ibeam' : ibeam,
                       'snr' : heimsnr}
@@ -603,7 +597,7 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
                         ibox=ibox, ibeam=ibeam, prob=prob,
                         showplot=showplot,
                         multibeam_dm0ts=multibeam_dm0ts,fnT2clust=fnT2clust,imjd=imjd,
-                        fake=fake)
+                        injected=injected)
 
     return not_real, prob
 
@@ -641,20 +635,22 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
         real event, as determined by classfication 
     """
 
-    trigname = list(trigger_dict.keys())[0]
-#    trigname = trigger_dict['trigname']  # need to restructure to use this for initial dict
-    dm = trigger_dict[trigname]['dm']
-    ibox = trigger_dict[trigname]['ibox']
-    ibeam = trigger_dict[trigname]['ibeam'] + 1
-    timehr = trigger_dict[trigname]['mjds']
-    snr = trigger_dict[trigname]['snr']
-
-    if '_inj' in trigname:
-        fake = True
-        print("This burst was injected")
-    else:
-        print("Not injected")
-        fake = False
+#     trigname = list(trigger_dict.keys())[0]
+# #      # need to restructure to use this for initial dict
+#     dm = trigger_dict[trigname]['dm']
+#     ibox = trigger_dict[trigname]['ibox']
+#     ibeam = trigger_dict[trigname]['ibeam'] + 1
+#     timehr = trigger_dict[trigname]['mjds']
+#     snr = trigger_dict[trigname]['snr']
+#     injected = trigger_dict[trigname]['injected']
+    
+    trigname = trigger_dict['trigname']
+    dm = trigger_dict['dm']
+    ibox = trigger_dict['ibox']
+    ibeam = trigger_dict['ibeam'] + 1
+    timehr = trigger_dict['mjds']
+    snr = trigger_dict['snr']
+    injected = trigger_dict['injected']
     
     fnT2clust = f'{T2dir}/cluster_output.csv'
     fname = None
@@ -704,13 +700,16 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
                              nfreq_plot=nfreq_plot, classify=classify, showplot=showplot, 
                              multibeam=flist, heim_raw_tres=1, save_data=save_data,
                              candname=trigname, fnT2clust=fnT2clust, imjd=timehr,
-                             fake=fake)
+                             injected=injected)
     real = not not_real
 
     if toslack:
         if not_real==False:
             print("Sending to slack")
-            slack_client.files_upload(channels='candidates', file=figname, initial_comment=figname)
+            try:
+                slack_client.files_upload(channels='candidates', file=figname, initial_comment=figname)
+            except slack.errors.SlackApiError as exc:
+                print(f'SlackApiError!: {str(exc)}')
         else:
             print("Not real. Not sending to slack")
 
