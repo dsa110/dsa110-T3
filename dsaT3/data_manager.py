@@ -38,6 +38,13 @@ class DataManager:
                 'destination': (
                     "{candidates_dir}/{candname}/Level2/voltages/{candname}_{subband}_data.out"),
             },
+        'voltages_headers':
+            {
+                'target': "{voltage_dir}/{hostname}/{candname}_header.json",
+                'target_scp': "ubuntu@{hostname}.sas.pvt:/home/ubuntu/data/{candname}_header.json",
+                'destination': (
+                    "{candidates_dir}/{candname}/Level2/voltages/{candname}_{subband}_header.json"),
+            },
         'filterbank':
             {
                 'target': "{operations_dir}/T1/{candname}/{candname}_{beamnumber}.fil",
@@ -52,12 +59,17 @@ class DataManager:
         'hdf5_files':
             {
                 'target': "{operations_dir}/correlator/{hdf5_name}*.hdf5",
-                'destination': "{candidates_dir}/{candname}/Level3/"
+                'destination': "{candidates_dir}/{candname}/Level2/calibration/"
             },
         'T2_csv':
             {
                 'target': "{operations_dir}/T2/cluster_output/cluster_output.csv",
                 'destination': "{candidates_dir}/{candname}/Level2/T2_{candname}.csv"
+            },
+        'T2_json':
+            {
+                'target': "{operations_dir}/T2/cluster_output/cluster_output{candname}.json",
+                'destination': "{candidates_dir}/{candname}/Level2/voltages/T2_{candname}.json"
             },
         'filplot_json':
             {
@@ -104,6 +116,7 @@ class DataManager:
         self.link_filterbank()
         self.link_beamformer_weights()
         self.copy_T2_csv()
+        self.copy_T2_json()
         self.link_filplot_and_json()
 
         return self.candparams
@@ -173,6 +186,53 @@ class DataManager:
 
         self.logger.info(f"Voltages linked for {self.candname}.")
 
+    def copy_voltages_headers(self, timeout_s: int = 60*60) -> None:
+        """Link voltage headers to candidate directory."""
+
+        end_time = Time.now() + timeout_s * u.s
+        tsleep = timeout_s / 100
+
+        self.logger.info(
+            f"Linking voltage headers to candidate directory for {self.candname}.")
+
+        found = [False] * len(self.subband_corrnames)
+
+        while not all(found):
+            if Time.now() > end_time:
+                raise FileNotFoundError(
+                    "Timeout waiting for voltage files to be written.")
+
+            for subband, corrname in enumerate(self.subband_corrnames):
+                if found[subband]:
+                    continue
+
+                destpath = Path(
+                    self.directory_structure['voltages_headers']['destination'].format(
+                        candidates_dir=self.candidates_dir, candname=self.candname,
+                        subband=f"sb{subband:02d}"))
+                sourcepath = Path(
+                    self.directory_structure['voltages_headers']['target'].format(
+                        voltage_dir=self.voltage_dir, hostname=corrname, candname=self.candname))
+                sourcepath_scp = self.directory_structure['voltages_headers']['target_scp'].format(
+                    hostname=corrname, candname=self.candname)
+
+                if sourcepath.exists():
+                    self.copy_file(sourcepath, destpath, remote=False)
+                    found[subband] = True
+                else:
+                    try:
+                        self.copy_file(sourcepath_scp, destpath, remote=True)
+                    except subprocess.CalledProcessError as exc:
+                        self.logger.error(
+                            f"scp returned non-zero error code copying {sourcepath_scp} to "
+                            f"{destpath} with output: {exc}")
+                    else:
+                        found[subband] = True
+
+            time.sleep(tsleep)
+
+        self.logger.info(f"Voltage headers linked for {self.candname}.")
+
     def link_filterbank(self) -> None:
         """Link filterbank to candidate directory."""
 
@@ -219,7 +279,7 @@ class DataManager:
         self.logger.info(f"Found beamformerweights: {beamformer_name}")
 
         sourcepaths = beamformer_dir.glob(
-            f"beamformer_weights_{beamformer_name}*.dat")
+            f"beamformer_weights_*_{beamformer_name}.dat")
 
         subband_pattern = re.compile(r'sb\d\d')
         for sourcepath in sourcepaths:
@@ -337,6 +397,27 @@ class DataManager:
 
         self.logger.info(
             f"Linked T2 csv to candidate directory for {self.candname}")
+
+    def copy_T2_json(self):
+        """Copy the T2 json file to the candidates directory."""
+
+        self.logger.info(
+            f"Copying T2 json to candidate directory for {self.candname}.")
+
+        sourcepath = Path(
+            self.directory_structure['T2_json']['target'].format(
+                operations_dir=self.operations_dir, candname=self.candname))
+        destpath = Path(
+            self.directory_structure['T2_json']['destination'].format(
+                candidates_dir=self.candidates_dir, candname=self.candname))
+
+        # TODO: create sourcepath to file of last two days of T2 json
+        self.copy_file(sourcepath, destpath, remote=False)
+
+        self.candparams['T2_json'] = str(destpath)
+
+        self.logger.info(
+            f"Linked T2 json to candidate directory for {self.candname}")
 
     def link_filplot_and_json(self):
         """Link the filplotter json and png files."""
