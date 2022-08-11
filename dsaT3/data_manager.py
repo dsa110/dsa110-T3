@@ -136,7 +136,7 @@ class DataManager:
         self.logger.info(
             f"Directory structure at {cand_dir} created for {self.candname}.")
 
-    def copy_voltages(self, timeout_s: int = 60*60) -> None:
+    def copy_voltages(self, timeout_s: int = 3*60*60) -> None:
         """Link voltages to candidate directory."""
 
         end_time = Time.now() + timeout_s * u.s
