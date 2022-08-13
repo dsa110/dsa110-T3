@@ -98,10 +98,16 @@ class RFI:
         elif axis==0:
             xval = np.arange(self.nfreq)
             meanaxis=1
+        else:
+            assert "Expected axis=0 or axis=1"
 
         p = np.polyfit(xval, np.mean(self.data,axis=meanaxis), 4)
         f = np.poly1d(p)
-        self.data -= f(xval)
+
+        if axis==1:
+            self.data -= f(xval)[None]
+        elif axis==0:
+            self.data -= f(xval)[:,None]
 
 def apply_rfi_filters_grex(data, sigma_thresh_chan=3.,
                     sigma_thresh_dm0=7., perchannel=False):
