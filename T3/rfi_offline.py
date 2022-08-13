@@ -92,12 +92,10 @@ class RFI:
         """ Detrend data along specified axis
         with a polynomial of given degree
         """
-        if axis==0:
+        if axis==1:
             xval = np.arange(self.ntime)
-            meanaxis=1
-        elif axis==1:
+        elif axis==0:
             xval = np.arange(self.nfreq)
-            meanaxis=0
 
         p = np.polyfit(xval, np.mean(self.data,axis=meanaxis), 4)
         f = np.poly1d(p)
