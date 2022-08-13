@@ -97,7 +97,7 @@ class RFI:
         elif axis==0:
             xval = np.arange(self.nfreq)
 
-        p = np.polyfit(xval, np.mean(self.data,axis=meanaxis), 4)
+        p = np.polyfit(xval, np.mean(self.data,axis=axis), 4)
         f = np.poly1d(p)
         self.data -= f(xval)
 
