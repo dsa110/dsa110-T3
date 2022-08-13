@@ -103,9 +103,9 @@ def read_fil_data_grex(fn, start=0, stop=1):
     fch_f = fch1 + nchans*foff
     freq = np.linspace(fch1,fch_f,nchans)
     try:
-        data = fil_obj.readBlock(start, -1)
+        data = fil_obj.read_block(start, -1)
     except(ValueError):
-        data = fil_obj.readBlock(start, header['nsamples'])
+        data = fil_obj.read_block(start, header.nsamples)
     return data, freq, delta_t, header
 
 
