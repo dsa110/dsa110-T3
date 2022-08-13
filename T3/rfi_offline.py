@@ -94,10 +94,12 @@ class RFI:
         """
         if axis==1:
             xval = np.arange(self.ntime)
+            meanaxis=0
         elif axis==0:
             xval = np.arange(self.nfreq)
+            meanaxis=1
 
-        p = np.polyfit(xval, np.mean(self.data,axis=axis), 4)
+        p = np.polyfit(xval, np.mean(self.data,axis=meanaxis), 4)
         f = np.poly1d(p)
         self.data -= f(xval)
 
