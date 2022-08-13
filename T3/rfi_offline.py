@@ -157,7 +157,7 @@ if __name__=='__main__':
             break
 
         data = apply_rfi_filters_grex(data_fil_obj.data)
-        print("Done cleaning chunk {ii}")
+        print(r"Done cleaning chunk {ii}")
         continue
         if ii==0:
             reader.write_to_fil(np.zeros([header['nchans'], 0]), header, fn_out_fil)
