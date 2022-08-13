@@ -145,12 +145,14 @@ if __name__=='__main__':
     chunksize = 2**14
     
     for ii in range(int(1e8)):
-        data_fil_obj, freq_arr, dt, header = reader.read_fil_data(fn_fil, 
+        data_fil_obj, freq_arr, dt, header = analysis_tools.read_fil_data(fn_fil, 
                                             start=ii*chunksize, stop=chunksize)
         if data_fil_obj.data.shape[1]==0:
             break
 
         data = apply_rfi_filters(data_fil_obj.data)
+        print("Done cleaning chunk {ii}")
+        continue
         if ii==0:
             reader.write_to_fil(np.zeros([header['nchans'], 0]), header, fn_out_fil)
 
