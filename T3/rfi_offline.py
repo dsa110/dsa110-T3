@@ -145,7 +145,7 @@ if __name__=='__main__':
     chunksize = 2**14
     
     for ii in range(int(1e8)):
-        data_fil_obj, freq_arr, dt, header = analysis_tools.read_fil_data(fn_fil, 
+        data_fil_obj, freq_arr, dt, header = analysis_tools.read_fil_data_grex(fn_fil, 
                                             start=ii*chunksize, stop=chunksize)
         if data_fil_obj.data.shape[1]==0:
             break
