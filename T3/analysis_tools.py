@@ -110,10 +110,6 @@ def read_fil_data_grex(fn, start=0, stop=1):
 
 
 
-
-
-
-
 class SNR_Tools:
 
     def __init__(self):

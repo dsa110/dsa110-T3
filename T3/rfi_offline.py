@@ -102,7 +102,7 @@ class RFI:
             assert "Expected axis=0 or axis=1"
 
         p = np.polyfit(xval, np.mean(self.data,axis=meanaxis), 4)
-        f = np.poly1d(p)
+        f = np.poly1d(p) 
 
         if axis==1:
             self.data -= f(xval)[None]
@@ -148,7 +148,7 @@ def apply_rfi_filters_grex(data, sigma_thresh_chan=3.,
 if __name__=='__main__':
     fn_fil = sys.argv[1]
     fn_out_fil = sys.argv[2]
-    chunksize = 2**14
+    chunksize = 2**12
     
     for ii in range(int(1e8)):
         data_fil_obj, freq_arr, dt, header = analysis_tools.read_fil_data_grex(fn_fil, 
@@ -156,7 +156,7 @@ if __name__=='__main__':
         if data_fil_obj.data.shape[1]==0:
             break
 
-        data = apply_rfi_filters(data_fil_obj.data)
+        data = apply_rfi_filters_grex(data_fil_obj.data)
         print("Done cleaning chunk {ii}")
         continue
         if ii==0:
