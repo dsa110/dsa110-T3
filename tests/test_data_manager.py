@@ -241,11 +241,11 @@ def test_datamanager_link_caltables(tmpdir):
     pass
 
 
-def test_datamanager_link_T2csv(tmpdir):
+def test_datamanager_copy_T2csv(tmpdir):
     dm = FakeDataManager(CANDPARAMS, tmpdir)
     dm.create_directory_structure()
 
-    dm.link_T2_csv()
+    dm.copy_T2_csv()
 
     T2_path = Path(dm.directory_structure['T2_csv']['destination'].format(
         candidates_dir=dm.candidates_dir, candname=dm.candname))

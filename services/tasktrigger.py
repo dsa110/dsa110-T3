@@ -29,7 +29,7 @@ while True:
         if d.trigname not in candnames:
             print(f"Submitting task for trigname {d.trigname}")
             d_fp = client.submit(T3_manager.run_filplot, d, wait=True, lock=LOCK, resources={'MEMORY': 10e9}, priority=-1)  # filplot and classify
-            d_cs = client.submit(T3_manager.run_createstructure, d_fp, lock=LOCK, priority=1)  # burstfit model fit
+            d_cs = client.submit(T3_manager.run_createstructure, d_fp, lock=LOCK, priority=1)  # create directory structure
             d_bf = client.submit(T3_manager.run_burstfit, d_fp, lock=LOCK, priority=1)  # burstfit model fit
             d_vc = client.submit(T3_manager.run_voltagecopy, d_cs, lock=LOCK)  # copy voltages
             d_h5 = client.submit(T3_manager.run_hdf5copy, d_cs, lock=LOCK)  # copy hdf5
