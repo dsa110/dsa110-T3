@@ -3,13 +3,15 @@ import numpy as np
 import glob
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
+from event import event
 from dsaT3 import filplot_funcs as filf
 from dsaT3 import data_manager
 import time, os
 import json
-from dask.distributed import Client
+from dask.distributed import Client, Lock
 
 client = Client('10.42.0.232:8786')
+LOCK = Lock('update_json')
 ds = dsa_store.DsaStore()
 LOGGER = dsl.DsaSyslogger()
 LOGGER.subsystem("software")
@@ -21,7 +23,30 @@ FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
 
 
-# TODO: change all run_* functions to take DSAEvent as input
+def submit_cand(fl, LOCK=None):
+    """ Given filename of trigger json, create DSACand and submit to scheduler for T3 processing.
+    """
+
+    d = event.create_event(fl)
+    print(f"Submitting task for trigname {d.trigname}")
+
+    d_fp = client.submit(run_filplot, d, key=f"run_filplot-{d.trigname}", wait=True, lock=LOCK, resources={'MEMORY': 10e9}, priority=-1)  # filplot and classify
+    d_cs = client.submit(run_createstructure, d_fp, key=f"run_createstructure-{d.trigname}", lock=LOCK, priority=1)  # create directory structure
+    d_bf = client.submit(run_burstfit, d_fp, key=f"run_burstfit-{d.trigname}", lock=LOCK, priority=1)  # burstfit model fit
+    d_vc = client.submit(run_voltagecopy, d_cs, key=f"run_voltagecopy-{d.trigname}", lock=LOCK)  # copy voltages
+    d_h5 = client.submit(run_hdf5copy, d_cs, key=f"run_hdf5copy-{d.trigname}", lock=LOCK)  # copy hdf5
+    d_fm = client.submit(run_fieldmscopy, d_cs, key=f"run_fieldmscopy-{d.trigname}", lock=LOCK)  # copy field image MS
+    d_hr = client.submit(run_hires, (d_bf, d_vc), key=f"run_hires-{d.trigname}", lock=LOCK)  # create high resolution filterbank
+    d_cm = client.submit(run_candidatems, (d_bf, d_vc), key=f"run_candidatems-{d.trigname}", lock=LOCK)  # make candidate image MS
+    d_po = client.submit(run_pol, d_hr, key=f"run_pol-{d.trigname}", lock=LOCK)  # run pol analysis on hires filterbank
+    d_hb = client.submit(run_hiresburstfit, d_hr, key=f"run_hiresburstfit-{d.trigname}", lock=LOCK)  # run burstfit on hires filterbank
+    d_il = client.submit(run_imloc, d_cm, key=f"run_imloc-{d.trigname}", lock=LOCK)  # run image localization on candidate image MS
+    d_as = client.submit(run_astrometry, (d_fm, d_cm), key=f"run_astrometry-{d.trigname}", lock=LOCK)  # astrometric burst image
+    fut = client.submit(run_final, (d_h5, d_po, d_hb, d_il, d_as), key=f"run_final-{d.trigname}", lock=LOCK)
+
+    return fut
+
+
 def run_filplot(d, wait=False, lock=None):
     """ Given DSACand, run filterbank analysis, plotting, and classification ("filplot").
     Returns DSACand with updated fields.
@@ -102,7 +127,7 @@ def run_createstructure(d, lock=None):
 
 
 def run_burstfit(d, lock=None):
-    """ Given candidate dictionary, run burstfit analysis.
+    """ Given DSACand, run burstfit analysis.
     Returns new dictionary with refined DM, width, arrival time.
     """
 
