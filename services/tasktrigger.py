@@ -20,7 +20,7 @@ while True:
     t3_candnames = [fl.split('/')[-1].split('.')[0] for fl in t3_jsons]
     trig_jsons = [fl for fl, cn in zip(trig_jsons, trig_candnames) if cn not in t3_candnames]
     candnames = list(set([val.split('-')[1] for grp in cl.processing().values() for val in grp]))
-    print(f"Found {len(trig_jsons)} trigger jsons to process.")
+    print(f"Found {len(trig_jsons)} trigger jsons to process. Processing candnames {candnames}.")
 
     for fl in trig_jsons:
         d = event.create_event(fl)
@@ -29,7 +29,7 @@ while True:
             tasks.append(fut)
 
     try:
-        print(f'{len(tasks)} tasks in queue for candnames {candnames}')
+        print(f"{len(tasks)} tasks in queue")
         for future in tasks:
             if future.done():
                 if future.status == 'finished':
