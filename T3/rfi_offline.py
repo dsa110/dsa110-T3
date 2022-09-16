@@ -136,10 +136,15 @@ def apply_rfi_filters_grex(data, sigma_thresh_chan=3.,
     if perchannel:
         R.per_channel_sigmacut(1, sigma_thresh_chan)
 
+    # Apply a cut on variance in time domain
     R.variancecut(axis=0, sigma_thresh=3)
+    # Apply a cut on variance for frequency spectrum
     R.variancecut(axis=1, sigma_thresh=6)
+    # Sum over the frequency axis and cut on the DM=0 timeseries 
     R.dm_zero_filter(sigma_thresh_dm0)
+    # Detrend time series with degree 4 polynomial 
     R.detrend_data(axis=0,degree=4)
+    # Detrend spectrum with degree 4 polynomial 
     R.detrend_data(axis=1,degree=4)
     
     return R.data 
