@@ -22,7 +22,6 @@ TIMEOUT_FIL = 600
 FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
 
-
 def submit_cand(fl, lock=LOCK):
     """ Given filename of trigger json, create DSACand and submit to scheduler for T3 processing.
     """
@@ -79,6 +78,7 @@ def run_filplot(d, wait=False, lock=None):
         d.filfile = filfile
     else:
         logging_string = 'Timeout while waiting for {0} filfiles'.format(d.trigname)
+        logging_string += ' DM={0} ibox={1}'.format(d.dm, d.ibox)
         LOGGER.error(logging_string)
         filf.slack_client.chat_postMessage(channel='candidates', text=logging_string)
         d.candplot, d.probability, d.real = None, None, None
@@ -336,6 +336,6 @@ def wait_for_local_file(fl, timeout, allbeams=False):
         if elapsed > timeout:
             return None
         elif elapsed <= 5:
-            print(f"Waiting for files {fl}...")
+            print(f"Waiting for {len(fl)} files: {fl}...")
 
     return fl

@@ -7,6 +7,7 @@ subdirs_to_clear = [
     ("correlator", "*.hdf5"),
     ("T1/beams", "*.dat"),
     ("T1", "*/*.fil"),
+    ("T1", "22*"),
     ("T2/cluster_output", "*.cand"),
     ("T2/cluster_output", "*.json"),
     ("T3", "*.png"),
@@ -26,4 +27,7 @@ for subdir, pattern in subdirs_to_clear:
         modtime = modtime.replace(tzinfo=cutoff.tzinfo)
         if modtime < cutoff:
             print(f'Removing {file}')
-            file.unlink()
+            try:
+                file.unlink()
+            except:
+                file.rmdir()

@@ -215,7 +215,7 @@ def plotfour(dataft, datats, datadmt,
         axs[2][0].set_xlabel('Time (ms)')
                 
         if fnT2clust is not None:
-            T2object = pandas.read_csv(fnT2clust)
+            T2object = pandas.read_csv(fnT2clust, on_bad_lines='warn')
             ind = np.where(np.abs(86400*(imjd-T2object.mjds[:]))<30.0)[0]
             ttsec = (T2object.mjds.values-imjd)*86400
             mappable = axs[2][1].scatter(ttsec[ind],
@@ -474,6 +474,12 @@ def generate_beam_time_arr(fl, ibeam=0, pre_rebin=1,
     beamno_arr=[]
     
     for jj,fnfil in enumerate(fl):
+
+#        if not os.path.exists(fnfil):
+#            beamno = int(fnfil.strip('.fil').split('_')[-1])
+#            beam_time_arr[beamno, :] = 0
+#            continue
+        
         print(fnfil, beam_time_arr.shape)
         beamno = int(fnfil.strip('.fil').split('_')[-1])
         data, freq, delta_t_raw, header = read_fil_data_dsa(fnfil, start=0, 
@@ -659,8 +665,9 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
         sortlambda = lambda fnfil: int(fnfil.strip('.fil').split('_')[-1])
         fllisting = sorted(flist, key=sortlambda)
     else:
-         flist = fllisting
+        flist = fllisting
 
+#    fname = T1dir + '/' +  trigname + '_%d.fil'%ibeam
     fname = fllisting[ibeam]
 
     if toslack:
