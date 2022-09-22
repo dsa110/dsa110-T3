@@ -8,6 +8,7 @@ from dsaT3 import filplot_funcs as filf
 from dsaT3 import data_manager
 import time, os
 import json
+from dataclasses import asdict
 from dask.distributed import Client, Lock
 
 client = Client('10.42.0.232:8786')
@@ -87,7 +88,7 @@ def run_filplot(d, wait=False, lock=None):
     # launch plot and classify
     try:
         # TODO: filplot can handle DSACand
-        d.candplot, d.probability, d.real = filf.filplot_entry(d.__dict__, rficlean=False)
+        d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False)
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
             d.trigname,
@@ -117,7 +118,7 @@ def run_createstructure(d, lock=None):
         # TODO: have DataManager parse DSACand
         dm = data_manager.DataManager(d.__dict__)
         # TODO: have update method accept dict or DSACand
-        d.__dict__.update(dm())
+        d.update(dm())
 
     else:
         print("Not running createstructure for non-astrophysical candidate.")
@@ -138,9 +139,7 @@ def run_burstfit(d, lock=None):
         LOGGER.info('Running burstfit on {0}'.format(d.trigname))
         d_bf = real_time_burstfit(d.trigname, d.filfile, d.snr, d.dm, d.ibox)
 
-        # TODO: have update method accept dict or DSACand
-        d.__dict__.update(d_bf)
-
+        d.update(d_bf)
         d.writejson(outpath=OUTPUT_PATH, lock=lock)
     else:
         print('Not running burstfit on {0}'.format(d.trigname))
@@ -160,8 +159,7 @@ def run_hdf5copy(d, lock=None):
         dm = data_manager.DataManager(d.__dict__)
         dm.link_hdf5_files()
 
-        # TODO: have update method accept dict or DSACand
-        d.__dict__.update(dm.candparams)
+        d.update(dm.candparams)
         d.writejson(outpath=OUTPUT_PATH, lock=lock)
 
     return d
@@ -178,7 +176,7 @@ def run_voltagecopy(d, lock=None):
         dm.copy_voltages()
 
         # TODO: have update method accept dict or DSACand
-        d.__dict__.update(dm.candparams)
+        d.update(dm.candparams)
         d.writejson(outpath=OUTPUT_PATH, lock=lock)
 
     return d
