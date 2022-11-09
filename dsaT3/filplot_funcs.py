@@ -22,7 +22,7 @@ from astropy.time import Time
 import dsautils.coordinates
 import dsautils.dsa_store as ds
 
-MLMODELPATH='/home/ubuntu/connor/MLmodel/20190501freq_time.hdf5' # Keras neural network model for Freq/Time array
+MLMODELPATH='/media/ubuntu/ssd//connor/MLmodel/20190501freq_time.hdf5'
 webPLOTDIR='/dataz/dsa110/operations/T3/'
 T1dir = '/dataz/dsa110/operations/T1'
 T2dir = '/dataz/dsa110/operations/T2/cluster_output'
