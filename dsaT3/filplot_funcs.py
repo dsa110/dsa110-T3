@@ -712,12 +712,12 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
 
     if toslack:
         if not_real==False:
-            print("Sending to slack")
+            print(f"Sending {figname} to slack")
             try:
                 slack_client.files_upload(channels='candidates', file=figname, initial_comment=figname)
             except slack.errors.SlackApiError as exc:
                 print(f'SlackApiError!: {str(exc)}')
         else:
-            print("Not real. Not sending to slack")
+            print(f"Not real. Not sending {figname} to slack")
 
     return figname, prob, real

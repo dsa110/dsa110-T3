@@ -1,6 +1,7 @@
 from pathlib import Path
 import datetime
 import time
+import shutil
 
 operations_dir = Path("/dataz/dsa110/operations")
 subdirs_to_clear = [
@@ -8,6 +9,7 @@ subdirs_to_clear = [
     ("T1/beams", "*.dat"),
     ("T1", "*/*.fil"),
     ("T1", "22*"),
+    ("T1", "23*"),
     ("T2/cluster_output", "*.cand"),
     ("T2/cluster_output", "*.json"),
     ("T3", "*.png"),
@@ -30,4 +32,4 @@ for subdir, pattern in subdirs_to_clear:
             try:
                 file.unlink()
             except:
-                file.rmdir()
+                shutil.rmtree(file)
