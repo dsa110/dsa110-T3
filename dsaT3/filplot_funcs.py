@@ -549,7 +549,7 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
              ibeam=-1, rficlean=True, nfreq_plot=32, 
              classify=False, heim_raw_tres=1, 
              showplot=True, save_data=True, candname=None,
-             fnT2clust=None, imjd=0, injected=False):
+             fnT2clust=None, imjd=0, injected=False, fast_classify=False):
     """ Vizualize FRB candidates on DSA-110
     fn is filterbnak file name.
     dm is dispersion measure as float.
@@ -576,6 +576,9 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
         prob = classify_freqtime(MLMODELPATH, dataft)
     else:
         prob = -1
+        
+    if fast_classify:
+        return -1, prob
     
     if save_data:
         fnout = (fn.split('/')[-1]).strip('.fil') + '.hdf5'
@@ -640,15 +643,6 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     real : bool
         real event, as determined by classfication 
     """
-
-#     trigname = list(trigger_dict.keys())[0]
-# #      # need to restructure to use this for initial dict
-#     dm = trigger_dict[trigname]['dm']
-#     ibox = trigger_dict[trigname]['ibox']
-#     ibeam = trigger_dict[trigname]['ibeam'] + 1
-#     timehr = trigger_dict[trigname]['mjds']
-#     snr = trigger_dict[trigname]['snr']
-#     injected = trigger_dict[trigname]['injected']
     
     trigname = trigger_dict['trigname']
     dm = trigger_dict['dm']
@@ -685,15 +679,6 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
         l = 100.0
         b = 50.0
 
-#    ind_near = utils.match_pulsar(ra_mjd, dec_mjd, thresh_deg=3.5)
-
-#    psr_txt_str = ''
-#    for ind_jj in ind_near:
-#        name_psrb = utils.query['PSRB'][ind_jj]
-#        name_psrj = utils.query['PSRJ'][ind_jj]
-#        dm_psr = utils.query['DM'][ind_jj]
-#        psr_txt_str += '%s/%s: %0.1f\n' % (name_psrb, name_psrj, dm_psr)
-
     outstr = (trigname, dm, int(ibox), int(ibeam), timehr, ra_mjd.value, dec_mjd.value, l, b)
     suptitle = 'candname:%s  DM:%0.1f  boxcar:%d \nibeam:%d MJD:%f \nRa/Dec=%0.1f,%0.1f Gal lon/lat=%0.1f,%0.1f' % outstr
 
@@ -721,3 +706,101 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
             print("Not real. Not sending to slack")
 
     return figname, prob, real
+
+def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
+                       rficlean=False, ndm=1, nfreq_plot=32, save_data=True,
+                       fllisting=None):
+    """ Given datestring and trigger dictionary, run filterbank plotting, classifying, slack posting.
+    Returns figure filename and classification probability. 
+    
+    Parameters
+    ----------
+    trigger_dict : dict
+        dictionary with candidate parameters, read from json file 
+    toslack : bool 
+        send plot to slack if real 
+    classify : bool 
+        classify dynamic spectrum with keras CNN
+    ndm : int 
+        number of DMs for DM/time plot
+    nfreq_plot : int 
+        number of freq channels for freq/time plot
+    save_data : bool 
+        save down classification data
+    fllisting : list 
+        list of filterbank files 
+        
+    Returns
+    -------
+    fnameout : str 
+        figure file path
+    prob : float 
+        probability from dynamic spectrum CNN
+    real : bool
+        real event, as determined by classfication 
+    """
+    
+    trigname = trigger_dict['trigname']
+    dm = trigger_dict['dm']
+    ibox = trigger_dict['ibox']
+    ibeam = trigger_dict['ibeam'] + 1
+    timehr = trigger_dict['mjds']
+    snr = trigger_dict['snr']
+    injected = trigger_dict['injected']
+    
+    fnT2clust = f'{T2dir}/cluster_output.csv'
+    fname = None
+    
+    if fllisting is None:
+        flist = glob.glob(f"{os.path.join(T1dir, trigname)}/*.fil")
+        sortlambda = lambda fnfil: int(fnfil.strip('.fil').split('_')[-1])
+        fllisting = sorted(flist, key=sortlambda)
+    else:
+        flist = fllisting
+
+#    fname = T1dir + '/' +  trigname + '_%d.fil'%ibeam
+    fname = fllisting[ibeam]
+
+    if toslack:
+        showplot = False
+    else:
+        showplot = True
+
+    # VR hack
+    try:
+        ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(ibeam, obstime=Time(timehr, format='mjd'))
+        l, b = dsautils.coordinates.get_galcoord(ra_mjd.value, dec_mjd.value)
+    except:
+        ra_mjd = 1.0*u.deg
+        dec_mjd = 71.5*u.deg
+        l = 100.0
+        b = 50.0
+
+    outstr = (trigname, dm, int(ibox), int(ibeam), timehr, ra_mjd.value, dec_mjd.value, l, b)
+    suptitle = 'candname:%s  DM:%0.1f  boxcar:%d \nibeam:%d MJD:%f \nRa/Dec=%0.1f,%0.1f Gal lon/lat=%0.1f,%0.1f' % outstr
+
+    figdirout = webPLOTDIR
+    figname = figdirout+trigname+'.png'
+
+    assert fname is not None, "Must set fname"
+    not_real, prob = filplot(fname, dm, ibox, figname=figname,
+                             ndm=ndm, suptitle=suptitle, heimsnr=snr,
+                             ibeam=ibeam, rficlean=rficlean, 
+                             nfreq_plot=nfreq_plot, classify=classify, showplot=showplot, 
+                             multibeam=None, heim_raw_tres=1, save_data=save_data,
+                             candname=trigname, fnT2clust=fnT2clust, imjd=timehr,
+                             injected=injected, fast_classify=True)
+    print("Probability of fast classification: %0.2f" % prob)
+#     real = not not_real
+
+#     if toslack:
+#         if not_real==False:
+#             print("Sending to slack")
+#             try:
+#                 slack_client.files_upload(channels='candidates', file=figname, initial_comment=figname)
+#             except slack.errors.SlackApiError as exc:
+#                 print(f'SlackApiError!: {str(exc)}')
+#         else:
+#             print("Not real. Not sending to slack")
+
+#     return figname, prob, real
