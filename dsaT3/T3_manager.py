@@ -87,7 +87,10 @@ def run_filplot(d, wait=False, lock=None):
     
     # launch plot and classify
     try:
-        # TODO: filplot can handle DSACand
+        # Test fast classifier:
+        filf.filplot_entry_fast(asdict(d), toslack=False, classify=True,
+                                rficlean=False, ndm=1, nfreq_plot=32, save_data=False,
+                                fllisting=None)
         d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False)
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
