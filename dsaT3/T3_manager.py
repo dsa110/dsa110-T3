@@ -10,6 +10,8 @@ import time, os
 import json
 from dataclasses import asdict
 from dask.distributed import Client, Lock
+from ovro_alert import alert_client
+
 
 client = Client('10.42.0.232:8786')
 LOCK = Lock('update_json')
@@ -18,10 +20,12 @@ LOGGER = dsl.DsaSyslogger()
 LOGGER.subsystem("software")
 LOGGER.app("dsaT3")
 LOGGER.function("T3_manager")
+dc = alert_client.AlertClient('dsa')
 
 TIMEOUT_FIL = 600
 FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
+
 
 def submit_cand(fl, lock=LOCK):
     """ Given filename of trigger json, create DSACand and submit to scheduler for T3 processing.
@@ -268,10 +272,11 @@ def run_imloc(d, lock=None):
     """ Given DSACand (after candidate image MS), run image localization.
     """
 
-    print('placeholder run_imloc on {0}'.format(d.trigname))
-    LOGGER.info('placeholder run_imloc on {0}'.format(d.trigname))
+    print(f'Running localization (currently only posting to relay server) {d.trigname}')
+    LOGGER.info(f'Running localization (currently only posting to relay server) {d.trigname}')
 
-#    if d_cm['real'] and not d_cm['injected']:
+    if d['real'] and not d['injected']:
+        dc.set('observation', args=d)
 
     d.writejson(outpath=OUTPUT_PATH, lock=lock)
     return d
