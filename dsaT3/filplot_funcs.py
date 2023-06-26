@@ -22,8 +22,8 @@ from astropy.time import Time
 import dsautils.coordinates
 import dsautils.dsa_store as ds
 
-MLMODELPATH='/media/ubuntu/ssd//connor/MLmodel/20190501freq_time.hdf5'
-webPLOTDIR='/dataz/dsa110/operations/T3/'
+MLMODELPATH = '/media/ubuntu/ssd//connor/MLmodel/20190501freq_time.hdf5'
+webPLOTDIR = '/dataz/dsa110/operations/T3/'
 T1dir = '/dataz/dsa110/operations/T1'
 T2dir = '/dataz/dsa110/operations/T2/cluster_output'
 
@@ -235,7 +235,7 @@ def plotfour(dataft, datats, datadmt,
     not_real = False
 
     if multibeam_dm0ts is not None:
-        if classification_dict['snr_dm0_allbeam']>7.5:
+        if classification_dict['snr_dm0_allbeam']>0:
             if classification_dict['snr_dm0_ibeam']>10.:
                 if classification_dict['prob']<0.25:
                     not_real = True
