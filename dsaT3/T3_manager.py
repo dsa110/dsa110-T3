@@ -275,7 +275,7 @@ def run_imloc(d, lock=None):
     print(f'Running localization (currently only posting to relay server) {d.trigname}')
     LOGGER.info(f'Running localization (currently only posting to relay server) {d.trigname}')
 
-    if d['real'] and not d['injected']:
+    if d.real and not d.injected:
         dc.set('observation', args=d)
 
     d.writejson(outpath=OUTPUT_PATH, lock=lock)
