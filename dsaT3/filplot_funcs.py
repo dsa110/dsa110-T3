@@ -791,6 +791,7 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
                              candname=trigname, fnT2clust=fnT2clust, imjd=timehr,
                              injected=injected, fast_classify=True)
     print("Probability of fast classification: %0.2f" % prob)
+    return prob
 #     real = not not_real
 
 #     if toslack:
