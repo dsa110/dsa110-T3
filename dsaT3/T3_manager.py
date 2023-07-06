@@ -92,7 +92,7 @@ def run_filplot(d, wait=False, lock=None):
     # launch plot and classify
     try:
         # Test fast classifier:
-        filf.filplot_entry_fast(asdict(d), toslack=False, classify=True,
+        d.ibeam_prob = filf.filplot_entry_fast(asdict(d), toslack=False, classify=True,
                                 rficlean=False, ndm=1, nfreq_plot=32, save_data=False,
                                 fllisting=None)
         d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False)
