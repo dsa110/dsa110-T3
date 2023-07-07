@@ -121,15 +121,17 @@ def run_filplot(d, wait=False, lock=None):
 
 
 def fast_response(d):
-    """ Use DSACand with fast classification to do fast response (e.g., send VOEvent)
+    """ Use DSACand with fast classification to do fast response (e.g., set relay or send VOEvent)
     """
 
+    dc.set('observation', args=asdict(d))
+    
     infile = f'os.path.join({OUTPUT_PATH}, {ds.trigname}.json)'
     outfile = f'os.path.join({OUTPUT_PATH}, {ds.trigname}.xml)'
 
     res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
 
-    # TODO: test before sending
+    # TODO: is this ASAP with updated position later? or wait to send with good position?
 #    if res == 0:
 #        res = subprocess.call(['dsaevent', 'send-voevent', outfile, '--destination', IP_GUANO])
 
@@ -291,11 +293,12 @@ def run_imloc(d, lock=None):
     """ Given DSACand (after candidate image MS), run image localization.
     """
 
-    print(f'Running localization (currently only posting to relay server) {d.trigname}')
-    LOGGER.info(f'Running localization (currently only posting to relay server) {d.trigname}')
+    print(f'Running localization on {d.trigname}')
+    LOGGER.info(f'Running localization on {d.trigname}')
 
-    if d.real and not d.injected:
-        dc.set('observation', args=d)
+# TODO: is this the first sent or an update with good position?
+#    if d.real and not d.injected:
+#        dc.set('observation', args=asdict(d))
 
     d.writejson(outpath=OUTPUT_PATH, lock=lock)
     return d
