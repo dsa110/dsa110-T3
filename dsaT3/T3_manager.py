@@ -25,7 +25,7 @@ dc = alert_client.AlertClient('dsa')
 TIMEOUT_FIL = 600
 FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
-
+IP_GUANO = '3.13.26.235'  # TODO: confirm this copied from realfast
 
 def submit_cand(fl, lock=LOCK):
     """ Given filename of trigger json, create DSACand and submit to scheduler for T3 processing.
@@ -95,6 +95,11 @@ def run_filplot(d, wait=False, lock=None):
         d.ibeam_prob = filf.filplot_entry_fast(asdict(d), toslack=False, classify=True,
                                 rficlean=False, ndm=1, nfreq_plot=32, save_data=False,
                                 fllisting=None)
+
+        # TODO: define threshold better
+        if d.ibeam_prob > 0.9 and not d.injected:
+            fast_response(d)
+
         d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False)
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
@@ -113,6 +118,20 @@ def run_filplot(d, wait=False, lock=None):
     d.writejson(outpath=OUTPUT_PATH, lock=lock)
     
     return d
+
+
+def fast_response(d):
+    """ Use DSACand with fast classification to do fast response (e.g., send VOEvent)
+    """
+
+    infile = f'os.path.join({OUTPUT_PATH}, {ds.trigname}.json)'
+    outfile = f'os.path.join({OUTPUT_PATH}, {ds.trigname}.xml)'
+
+    res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
+
+    # TODO: test before sending
+#    if res == 0:
+#        res = subprocess.call(['dsaevent', 'send-voevent', outfile, '--destination', IP_GUANO])
 
 
 def run_createstructure(d, lock=None):
