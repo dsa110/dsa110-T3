@@ -98,7 +98,10 @@ def run_filplot(d, wait=False, lock=None):
 
         # TODO: define threshold better
         if d.ibeam_prob > 0.9 and not d.injected:
+            print('Running fast_response')
             fast_response(d)
+        else:
+            print('Not running fast_response')
 
         d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False)
     except Exception as exception:
