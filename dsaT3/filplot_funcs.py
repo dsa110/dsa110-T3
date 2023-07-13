@@ -14,6 +14,7 @@ import scipy.signal
 from scipy import stats
 import pandas
 import h5py
+from time import sleep
 
 from sigpyproc.Readers import FilReader
 import slack_sdk as slack
@@ -215,7 +216,13 @@ def plotfour(dataft, datats, datadmt,
         axs[2][0].set_xlabel('Time (ms)')
                 
         if fnT2clust is not None:
-            T2object = pandas.read_csv(fnT2clust, on_bad_lines='warn')
+            try:
+                T2object = pandas.read_csv(fnT2clust, on_bad_lines='warn')
+            except EmptyDataError:  # T2 file briefly disappears during rewrite
+                print(f"{fnT2clust} not found. Trying again...")
+                if not os.path.exists(fnT2clust):  # optional sleep, if file not present yet
+                    sleep(2)
+                T2object = pandas.read_csv(fnT2clust, on_bad_lines='warn')                
             ind = np.where(np.abs(86400*(imjd-T2object.mjds[:]))<30.0)[0]
             ttsec = (T2object.mjds.values-imjd)*86400
             mappable = axs[2][1].scatter(ttsec[ind],

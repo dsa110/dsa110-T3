@@ -129,8 +129,8 @@ def fast_response(d):
 
     dc.set('observation', args=asdict(d))
     
-    infile = f'os.path.join({OUTPUT_PATH}, {ds.trigname}.json)'
-    outfile = f'os.path.join({OUTPUT_PATH}, {ds.trigname}.xml)'
+    infile = f'os.path.join({OUTPUT_PATH}, {d.trigname}.json)'
+    outfile = f'os.path.join({OUTPUT_PATH}, {d.trigname}.xml)'
 
     res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
 
