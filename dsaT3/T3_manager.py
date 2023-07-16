@@ -1,15 +1,17 @@
 import traceback
 import numpy as np
 import glob
+import subprocess
+import time, os
+import json
+from dataclasses import asdict
+from dask.distributed import Client, Lock
+
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
 from event import event
 from dsaT3 import filplot_funcs as filf
 from dsaT3 import data_manager
-import time, os
-import json
-from dataclasses import asdict
-from dask.distributed import Client, Lock
 from ovro_alert import alert_client
 
 
@@ -129,8 +131,8 @@ def fast_response(d):
 
     dc.set('observation', args=asdict(d))
     
-    infile = f'os.path.join({OUTPUT_PATH}, {d.trigname}.json)'
-    outfile = f'os.path.join({OUTPUT_PATH}, {d.trigname}.xml)'
+    infile = os.path.join(OUTPUT_PATH, d.trigname + '.json')
+    outfile = os.path.join(OUTPUT_PATH, d.trigname + '.xml')
 
     res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
 

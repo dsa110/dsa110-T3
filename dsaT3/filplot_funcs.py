@@ -218,7 +218,7 @@ def plotfour(dataft, datats, datadmt,
         if fnT2clust is not None:
             try:
                 T2object = pandas.read_csv(fnT2clust, on_bad_lines='warn')
-            except EmptyDataError:  # T2 file briefly disappears during rewrite
+            except:  # T2 file may briefly disappear during rewrite
                 print(f"{fnT2clust} not found. Trying again...")
                 if not os.path.exists(fnT2clust):  # optional sleep, if file not present yet
                     sleep(2)
