@@ -27,7 +27,7 @@ dc = alert_client.AlertClient('dsa')
 TIMEOUT_FIL = 600
 FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
-IP_GUANO = '3.13.26.235'  # TODO: confirm this copied from realfast
+IP_GUANO = '3.13.26.235'
 
 def submit_cand(fl, lock=LOCK):
     """ Given filename of trigger json, create DSACand and submit to scheduler for T3 processing.
@@ -99,7 +99,7 @@ def run_filplot(d, wait=False, lock=None):
                                 fllisting=None)
 
         # TODO: define threshold better
-        if d.ibeam_prob > 0.9 and not d.injected:
+        if d.ibeam_prob > 0.95 and d.ibox <= 16 and not d.injected:
             print('Running fast_response')
             fast_response(d)
         else:
@@ -137,8 +137,8 @@ def fast_response(d):
     res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
 
     # TODO: is this ASAP with updated position later? or wait to send with good position?
-#    if res == 0:
-#        res = subprocess.call(['dsaevent', 'send-voevent', outfile, '--destination', IP_GUANO])
+    if res == 0:
+        res = subprocess.call(['dsaevent', 'send-voevent', outfile, '--destination', IP_GUANO])
 
 
 def run_createstructure(d, lock=None):
