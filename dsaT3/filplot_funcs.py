@@ -220,8 +220,9 @@ def plotfour(dataft, datats, datadmt,
                 T2object = pandas.read_csv(fnT2clust, on_bad_lines='warn')
             except:  # T2 file may briefly disappear during rewrite
                 print(f"{fnT2clust} not found. Trying again...")
-                if not os.path.exists(fnT2clust):  # optional sleep, if file not present yet
-                    sleep(2)
+                while not os.path.exists(fnT2clust):  # optional sleep, if file not present yet
+                    print("waiting for file to appear...")
+                    sleep(0.5)
                 T2object = pandas.read_csv(fnT2clust, on_bad_lines='warn')                
             ind = np.where(np.abs(86400*(imjd-T2object.mjds[:]))<30.0)[0]
             ttsec = (T2object.mjds.values-imjd)*86400
