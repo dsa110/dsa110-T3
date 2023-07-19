@@ -99,7 +99,7 @@ def run_filplot(d, wait=False, lock=None):
                                 fllisting=None)
 
         # TODO: define threshold better
-        if d.ibeam_prob > 0.95 and d.ibox <= 16 and not d.injected:
+        if d.ibeam_prob > 0.95 and d.ibox < 16 and not d.injected:
             print('Running fast_response')
             fast_response(d)
         else:
@@ -133,6 +133,12 @@ def fast_response(d):
     
     infile = os.path.join(OUTPUT_PATH, d.trigname + '.json')
     outfile = os.path.join(OUTPUT_PATH, d.trigname + '.xml')
+
+    if not os.path.exists(infile):
+        print(f"{infile} not found. waiting for it to appear...")
+        while not os.path.exists(infile):
+            print(f"not found yet...")
+            time.sleep(1)
 
     res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
 
