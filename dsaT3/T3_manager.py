@@ -60,6 +60,7 @@ def run_filplot(d, wait=False, lock=None):
 
     print('running filplot on {0}'.format(d.trigname))
     LOGGER.info('running filplot on {0}'.format(d.trigname))
+    d.writejson(outpath=OUTPUT_PATH, lock=lock)
 
     ibeam = d.ibeam + 1
 
@@ -135,16 +136,25 @@ def fast_response(d):
     outfile = os.path.join(OUTPUT_PATH, d.trigname + '.xml')
 
     if not os.path.exists(infile):
-        print(f"{infile} not found. waiting for it to appear...")
+        print(f"{infile} not found. Waiting for it to appear...")
+        elapsed = 0
+        waitloop = 5
         while not os.path.exists(infile):
-            print(f"not found yet...")
-            time.sleep(1)
+            print(f"Not found yet...")
+            time.sleep(waitloop)
+            elapsed += waitloop
+            if elapsed > TIMEOUT_FIL:
+                print(f"Giving up on {infile}.")
+                break
 
-    res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
+    if os.path.exists(infile):
+        res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
 
-    # TODO: is this ASAP with updated position later? or wait to send with good position?
-    if res == 0:
-        res = subprocess.call(['dsaevent', 'send-voevent', outfile, '--destination', IP_GUANO])
+        # TODO: is this ASAP with updated position later? or wait to send with good position?
+        if res == 0:
+            res = subprocess.call(['dsaevent', 'send-voevent', outfile, '--destination', IP_GUANO])
+    else:
+        print(f"Could not find {infile}, so no {outfile} made or event sent.")
 
 
 def run_createstructure(d, lock=None):
