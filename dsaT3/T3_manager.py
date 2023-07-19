@@ -38,17 +38,18 @@ def submit_cand(fl, lock=LOCK):
 
     d_fp = client.submit(run_filplot, d, key=f"run_filplot-{d.trigname}", wait=True, lock=lock, resources={'MEMORY': 10e9}, priority=-1)  # filplot and classify
     d_cs = client.submit(run_createstructure, d_fp, key=f"run_createstructure-{d.trigname}", lock=lock, priority=1)  # create directory structure
-    d_bf = client.submit(run_burstfit, d_fp, key=f"run_burstfit-{d.trigname}", lock=lock, priority=1)  # burstfit model fit
+#    d_bf = client.submit(run_burstfit, d_fp, key=f"run_burstfit-{d.trigname}", lock=lock, priority=1)  # burstfit model fit
     d_vc = client.submit(run_voltagecopy, d_cs, key=f"run_voltagecopy-{d.trigname}", lock=lock)  # copy voltages
     d_h5 = client.submit(run_hdf5copy, d_cs, key=f"run_hdf5copy-{d.trigname}", lock=lock)  # copy hdf5
     d_fm = client.submit(run_fieldmscopy, d_cs, key=f"run_fieldmscopy-{d.trigname}", lock=lock)  # copy field image MS
-    d_hr = client.submit(run_hires, (d_bf, d_vc), key=f"run_hires-{d.trigname}", lock=lock)  # create high resolution filterbank
-    d_cm = client.submit(run_candidatems, (d_bf, d_vc), key=f"run_candidatems-{d.trigname}", lock=lock)  # make candidate image MS
-    d_po = client.submit(run_pol, d_hr, key=f"run_pol-{d.trigname}", lock=lock)  # run pol analysis on hires filterbank
-    d_hb = client.submit(run_hiresburstfit, d_hr, key=f"run_hiresburstfit-{d.trigname}", lock=lock)  # run burstfit on hires filterbank
-    d_il = client.submit(run_imloc, d_cm, key=f"run_imloc-{d.trigname}", lock=lock)  # run image localization on candidate image MS
-    d_as = client.submit(run_astrometry, (d_fm, d_cm), key=f"run_astrometry-{d.trigname}", lock=lock)  # astrometric burst image
-    fut = client.submit(run_final, (d_h5, d_po, d_hb, d_il, d_as), key=f"run_final-{d.trigname}", lock=lock)
+#    d_hr = client.submit(run_hires, (d_bf, d_vc), key=f"run_hires-{d.trigname}", lock=lock)  # create high resolution filterbank
+#    d_cm = client.submit(run_candidatems, (d_bf, d_vc), key=f"run_candidatems-{d.trigname}", lock=lock)  # make candidate image MS
+#    d_po = client.submit(run_pol, d_hr, key=f"run_pol-{d.trigname}", lock=lock)  # run pol analysis on hires filterbank
+#    d_hb = client.submit(run_hiresburstfit, d_hr, key=f"run_hiresburstfit-{d.trigname}", lock=lock)  # run burstfit on hires filterbank
+#    d_il = client.submit(run_imloc, d_cm, key=f"run_imloc-{d.trigname}", lock=lock)  # run image localization on candidate image MS
+#    d_as = client.submit(run_astrometry, (d_fm, d_cm), key=f"run_astrometry-{d.trigname}", lock=lock)  # astrometric burst image
+#    fut = client.submit(run_final, (d_h5, d_po, d_hb, d_il, d_as), key=f"run_final-{d.trigname}", lock=lock)
+    fut = client.submit(run_final, (d_h5, d_fm, d_vc), key=f"run_final-{d.trigname}", lock=lock)
 
     return fut
 
@@ -148,11 +149,11 @@ def fast_response(d):
                 break
 
     if os.path.exists(infile):
-        res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
+        res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile], shell=True)
 
         # TODO: is this ASAP with updated position later? or wait to send with good position?
         if res == 0:
-            res = subprocess.call(['dsaevent', 'send-voevent', outfile, '--destination', IP_GUANO])
+            res = subprocess.call(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile])
     else:
         print(f"Could not find {infile}, so no {outfile} made or event sent.")
 
@@ -347,11 +348,12 @@ def run_final(ds, lock=None):
     May also update etcd to notify of completion.
     """
 
-    d, d_po, d_hb, d_il, d_as = ds
-    d.update(d_po)
-    d.update(d_hb)
-    d.update(d_il)
-    d.update(d_as)
+#    d, d_po, d_hb, d_il, d_as = ds
+    d, d_fm, d_vc = ds
+    d.update(d_fm)
+    d.update(d_vc)
+#    d.update(d_il)
+#    d.update(d_as)
 
     print('Final merge of results for {0}'.format(d.trigname))
     LOGGER.info('Final merge of results for {0}'.format(d.trigname))
