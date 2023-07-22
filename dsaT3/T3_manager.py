@@ -149,7 +149,7 @@ def fast_response(d):
                 break
 
     if os.path.exists(infile):
-        res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile], shell=True)
+        res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
 
         # TODO: is this ASAP with updated position later? or wait to send with good position?
         if res == 0:
