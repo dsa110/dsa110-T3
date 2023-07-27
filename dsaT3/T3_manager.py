@@ -92,22 +92,21 @@ def run_filplot(d, wait=False, lock=None):
         filf.slack_client.chat_postMessage(channel='candidates', text=logging_string)
         d.candplot, d.probability, d.real = None, None, None
         return d
-    
+
     # launch plot and classify
     try:
         # Test fast classifier:
         d.ibeam_prob = filf.filplot_entry_fast(asdict(d), toslack=False, classify=True,
                                 rficlean=False, ndm=1, nfreq_plot=32, save_data=False,
                                 fllisting=None)
-
-        # TODO: define threshold better
-        if d.ibeam_prob > 0.95 and d.ibox < 16 and not d.injected:
+        
+        if d.ibeam_prob > 0.95 and d.ibox < 16 and d.snr > 13:
             print('Running fast_response')
             fast_response(d)
         else:
             print('Not running fast_response')
 
-        d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False)
+        d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False, classify=True)
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
             d.trigname,
@@ -131,8 +130,6 @@ def fast_response(d):
     """ Use DSACand with fast classification to do fast response (e.g., set relay or send VOEvent)
     """
 
-    dc.set('observation', args=asdict(d))
-    
     infile = os.path.join(OUTPUT_PATH, d.trigname + '.json')
     outfile = os.path.join(OUTPUT_PATH, d.trigname + '.xml')
 
@@ -149,11 +146,18 @@ def fast_response(d):
                 break
 
     if os.path.exists(infile):
-        res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
+        if not d.injected:
+            print(f"Non-injection VOEvent created. Sending {infile}...")
+            dc.set('observation', args=asdict(d))
+            res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
+        else:
+            dc.set('test', args=asdict(d))
+    else:
+        print(f"No {infile} found. Not sending.")
 
         # TODO: is this ASAP with updated position later? or wait to send with good position?
-        if res == 0:
-            res = subprocess.call(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile])
+#        if res == 0:
+#            res = subprocess.call(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile])
     else:
         print(f"Could not find {infile}, so no {outfile} made or event sent.")
 
