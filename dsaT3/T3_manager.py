@@ -145,21 +145,22 @@ def fast_response(d):
                 print(f"Giving up on {infile}.")
                 break
 
+    res = 1
     if os.path.exists(infile):
+        res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
         if not d.injected:
-            print(f"Non-injection VOEvent created. Sending {infile}...")
             dc.set('observation', args=asdict(d))
-            res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
+            if res == 0:
+                print(f"Non-injection VOEvent created. Sending {outfile}...")
+                res = subprocess.call(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile])
+            else:
+                print(f"Non-injection event, but VOEvent {outfile} not created...")
         else:
             dc.set('test', args=asdict(d))
     else:
-        print(f"No {infile} found. Not sending.")
-
-        # TODO: is this ASAP with updated position later? or wait to send with good position?
-#        if res == 0:
-#            res = subprocess.call(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile])
-    else:
         print(f"Could not find {infile}, so no {outfile} made or event sent.")
+
+    # TODO: is this ASAP with updated position later? or wait to send with good position?
 
 
 def run_createstructure(d, lock=None):
