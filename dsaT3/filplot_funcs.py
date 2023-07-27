@@ -243,13 +243,13 @@ def plotfour(dataft, datats, datadmt,
     not_real = False
 
     if multibeam_dm0ts is not None:
-        if classification_dict['snr_dm0_allbeam']>0:
+        if classification_dict['snr_dm0_allbeam']>10:
             if classification_dict['snr_dm0_ibeam']>10.:
                 if classification_dict['prob']<0.25:
                     not_real = True
 
     try:
-        if classification_dict['prob']<0.01:
+        if classification_dict['prob']<0.05:
             not_real = True
     except:
         pass
@@ -547,6 +547,7 @@ def classify_freqtime(fnmodel, dataft):
     dataml = dataml/np.std(dataml)
     dataml[dataml!=dataml] = 0.0
     dataml = dataml[None,:,tlow:thigh, None]
+    print("Model shape:",dataml.shape)
     prob = float(model.predict(dataml)[0,1])
 
     return prob
@@ -711,7 +712,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
             except slack.errors.SlackApiError as exc:
                 print(f'SlackApiError!: {str(exc)}')
         else:
-            print(f"Not real. Not sending {figname} to slack")
+            print(f"Not real. Not sending {figname} to slack", prob)
 
     return figname, prob, real
 
