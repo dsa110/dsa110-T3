@@ -145,14 +145,14 @@ def fast_response(d):
                 print(f"Giving up on {infile}.")
                 break
 
-    res = 1
+    ret = 1
     if os.path.exists(infile):
-        res = subprocess.call(['dsaevent', 'create-voevent', infile, outfile])
+        ret = subprocess.run(['dsaevent', 'create-voevent', infile, outfile]).returncode
         if not d.injected:
             dc.set('observation', args=asdict(d))
-            if res == 0:
+            if ret == 0:
                 print(f"Non-injection VOEvent created. Sending {outfile}...")
-                res = subprocess.call(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile])
+                ret = subprocess.run(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile]).returncode
             else:
                 print(f"Non-injection event, but VOEvent {outfile} not created...")
         else:

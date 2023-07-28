@@ -216,14 +216,8 @@ def plotfour(dataft, datats, datadmt,
         axs[2][0].set_xlabel('Time (ms)')
                 
         if fnT2clust is not None:
-            try:
-                T2object = pandas.read_csv(fnT2clust, on_bad_lines='warn')
-            except:  # T2 file may briefly disappear during rewrite
-                print(f"{fnT2clust} not found. Trying again...")
-                while not os.path.exists(fnT2clust):  # optional sleep, if file not present yet
-                    print("waiting for file to appear...")
-                    sleep(0.5)
-                T2object = pandas.read_csv(fnT2clust, on_bad_lines='warn')                
+            T2object = get_T2object(fnT2clust)  # wrap with retry
+
             ind = np.where(np.abs(86400*(imjd-T2object.mjds[:]))<30.0)[0]
             ttsec = (T2object.mjds.values-imjd)*86400
             mappable = axs[2][1].scatter(ttsec[ind],
@@ -269,7 +263,15 @@ def plotfour(dataft, datats, datadmt,
         plt.close(fig)
 
     return not_real
-        
+
+
+@retry(EmptyDataError, tries=5, delay=0.5)
+def get_T2object(fnT2clust):
+    """ wrap up pandas call with retry to handle missing file
+    """
+
+    return pandas.read_csv(fnT2clust, on_bad_lines='warn')
+
 
 def dm_transform(data, dm_max=20,
                  dm_min=0, dm0=None, ndm=64, 
