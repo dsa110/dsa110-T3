@@ -392,6 +392,6 @@ def wait_for_local_file(fl, timeout, allbeams=False):
         if elapsed > timeout:
             return None
         elif elapsed <= 5:
-            print(f"Waiting for {len(fl)} files: {fl}...")
+            print(f"Waiting for {len(fl)} files, like {fl[0]}...")
 
     return fl
