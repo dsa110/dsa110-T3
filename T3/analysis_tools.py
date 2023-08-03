@@ -403,3 +403,77 @@ class SNR_Tools:
         plt.tight_layout()
         plt.show()
         plt.savefig(figname)
+
+def read_voltage(fn):
+    f = h5py.File(fn,'r')
+
+    # Should be (ntime, npol, nchan, {re/img})
+    data = f['voltages'][:]
+    return data 
+
+def voltage_to_stokes(data):
+    x = np.sqrt(data[:, 0, :, 0]**2 + data[:, 0, :, 1]**2)
+    y = np.sqrt(data[:, 1, :, 0]**2 + data[:, 1, :, 1]**2)
+
+    StokesI = x**2 + y**2
+
+    return StokesI
+
+import jax.numpy as np
+from jax import jit
+
+@jit
+def shift_data(data, delay):
+    """
+    Shift data by a certain number of samples.
+    
+    Parameters
+    ----------
+    data : array
+        The input data, with shape (ntime,).
+    delay : int
+        The number of samples to shift the data.
+
+    Returns
+    -------
+    array
+        The shifted data, with the same shape as the input data.
+    """
+    return np.roll(data, delay)
+
+def dedisperse(data, DM, f_low, f_high, dt, fref):
+    """
+    Perform incoherent dedispersion on the input data.
+
+    Parameters
+    ----------
+    data : array
+        The input data, with shape (nfreq, ntime).
+    DM : float
+        The dispersion measure, in pc cm^-3.
+    f_low : float
+        The lowest frequency, in MHz.
+    f_high : float
+        The highest frequency, in MHz.
+
+    Returns
+    -------
+    array
+        The dedispersed data, with the same shape as the input data.
+    """
+    # Get the number of frequency channels and time samples
+    nfreq, ntime = data.shape
+
+    # Calculate the frequencies of each channel
+    freqs = np.linspace(f_low, f_high, nfreq)
+
+    # Calculate the delay for each frequency channel
+    delays = 4.15e6 * DM * (1.0 / fref**2 - 1.0 / freqs**2)
+
+    # Convert delays to number of time samples
+    sample_delays = np.rint(delays / dt).astype(int)
+    print(sample_delays)
+    # Apply the shift to each frequency channel
+    dedispersed_data = np.stack([shift_data(data[i], sample_delays[i]) for i in range(nfreq)])
+
+    return dedispersed_data
