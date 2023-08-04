@@ -1,15 +1,17 @@
 import traceback
 import numpy as np
 import glob
+import subprocess
+import time, os
+import json
+from dataclasses import asdict
+from dask.distributed import Client, Lock
+
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
 from event import event
 from dsaT3 import filplot_funcs as filf
 from dsaT3 import data_manager
-import time, os
-import json
-from dataclasses import asdict
-from dask.distributed import Client, Lock
 from ovro_alert import alert_client
 
 
@@ -25,7 +27,7 @@ dc = alert_client.AlertClient('dsa')
 TIMEOUT_FIL = 600
 FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
-
+IP_GUANO = '3.13.26.235'
 
 def submit_cand(fl, lock=LOCK):
     """ Given filename of trigger json, create DSACand and submit to scheduler for T3 processing.
@@ -36,17 +38,18 @@ def submit_cand(fl, lock=LOCK):
 
     d_fp = client.submit(run_filplot, d, key=f"run_filplot-{d.trigname}", wait=True, lock=lock, resources={'MEMORY': 10e9}, priority=-1)  # filplot and classify
     d_cs = client.submit(run_createstructure, d_fp, key=f"run_createstructure-{d.trigname}", lock=lock, priority=1)  # create directory structure
-    d_bf = client.submit(run_burstfit, d_fp, key=f"run_burstfit-{d.trigname}", lock=lock, priority=1)  # burstfit model fit
+#    d_bf = client.submit(run_burstfit, d_fp, key=f"run_burstfit-{d.trigname}", lock=lock, priority=1)  # burstfit model fit
     d_vc = client.submit(run_voltagecopy, d_cs, key=f"run_voltagecopy-{d.trigname}", lock=lock)  # copy voltages
     d_h5 = client.submit(run_hdf5copy, d_cs, key=f"run_hdf5copy-{d.trigname}", lock=lock)  # copy hdf5
     d_fm = client.submit(run_fieldmscopy, d_cs, key=f"run_fieldmscopy-{d.trigname}", lock=lock)  # copy field image MS
-    d_hr = client.submit(run_hires, (d_bf, d_vc), key=f"run_hires-{d.trigname}", lock=lock)  # create high resolution filterbank
-    d_cm = client.submit(run_candidatems, (d_bf, d_vc), key=f"run_candidatems-{d.trigname}", lock=lock)  # make candidate image MS
-    d_po = client.submit(run_pol, d_hr, key=f"run_pol-{d.trigname}", lock=lock)  # run pol analysis on hires filterbank
-    d_hb = client.submit(run_hiresburstfit, d_hr, key=f"run_hiresburstfit-{d.trigname}", lock=lock)  # run burstfit on hires filterbank
-    d_il = client.submit(run_imloc, d_cm, key=f"run_imloc-{d.trigname}", lock=lock)  # run image localization on candidate image MS
-    d_as = client.submit(run_astrometry, (d_fm, d_cm), key=f"run_astrometry-{d.trigname}", lock=lock)  # astrometric burst image
-    fut = client.submit(run_final, (d_h5, d_po, d_hb, d_il, d_as), key=f"run_final-{d.trigname}", lock=lock)
+#    d_hr = client.submit(run_hires, (d_bf, d_vc), key=f"run_hires-{d.trigname}", lock=lock)  # create high resolution filterbank
+#    d_cm = client.submit(run_candidatems, (d_bf, d_vc), key=f"run_candidatems-{d.trigname}", lock=lock)  # make candidate image MS
+#    d_po = client.submit(run_pol, d_hr, key=f"run_pol-{d.trigname}", lock=lock)  # run pol analysis on hires filterbank
+#    d_hb = client.submit(run_hiresburstfit, d_hr, key=f"run_hiresburstfit-{d.trigname}", lock=lock)  # run burstfit on hires filterbank
+#    d_il = client.submit(run_imloc, d_cm, key=f"run_imloc-{d.trigname}", lock=lock)  # run image localization on candidate image MS
+#    d_as = client.submit(run_astrometry, (d_fm, d_cm), key=f"run_astrometry-{d.trigname}", lock=lock)  # astrometric burst image
+#    fut = client.submit(run_final, (d_h5, d_po, d_hb, d_il, d_as), key=f"run_final-{d.trigname}", lock=lock)
+    fut = client.submit(run_final, (d_h5, d_fm, d_vc), key=f"run_final-{d.trigname}", lock=lock)
 
     return fut
 
@@ -58,6 +61,7 @@ def run_filplot(d, wait=False, lock=None):
 
     print('running filplot on {0}'.format(d.trigname))
     LOGGER.info('running filplot on {0}'.format(d.trigname))
+    d.writejson(outpath=OUTPUT_PATH, lock=lock)
 
     ibeam = d.ibeam + 1
 
@@ -88,14 +92,21 @@ def run_filplot(d, wait=False, lock=None):
         filf.slack_client.chat_postMessage(channel='candidates', text=logging_string)
         d.candplot, d.probability, d.real = None, None, None
         return d
-    
+
     # launch plot and classify
     try:
         # Test fast classifier:
-        filf.filplot_entry_fast(asdict(d), toslack=False, classify=True,
+        d.ibeam_prob = filf.filplot_entry_fast(asdict(d), toslack=False, classify=True,
                                 rficlean=False, ndm=1, nfreq_plot=32, save_data=False,
                                 fllisting=None)
-        d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False)
+        
+        if d.ibeam_prob > 0.95 and d.ibox < 16 and d.snr > 13:
+            print('Running fast_response')
+            fast_response(d)
+        else:
+            print('Not running fast_response')
+
+        d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False, classify=True)
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
             d.trigname,
@@ -113,6 +124,43 @@ def run_filplot(d, wait=False, lock=None):
     d.writejson(outpath=OUTPUT_PATH, lock=lock)
     
     return d
+
+
+def fast_response(d):
+    """ Use DSACand with fast classification to do fast response (e.g., set relay or send VOEvent)
+    """
+
+    infile = os.path.join(OUTPUT_PATH, d.trigname + '.json')
+    outfile = os.path.join(OUTPUT_PATH, d.trigname + '.xml')
+
+    if not os.path.exists(infile):
+        print(f"{infile} not found. Waiting for it to appear...")
+        elapsed = 0
+        waitloop = 5
+        while not os.path.exists(infile):
+            print(f"Not found yet...")
+            time.sleep(waitloop)
+            elapsed += waitloop
+            if elapsed > TIMEOUT_FIL:
+                print(f"Giving up on {infile}.")
+                break
+
+    ret = 1
+    if os.path.exists(infile):
+        ret = subprocess.run(['dsaevent', 'create-voevent', infile, outfile]).returncode
+        if not d.injected:
+            dc.set('observation', args=asdict(d))
+            if ret == 0:
+                print(f"Non-injection VOEvent created. Sending {outfile}...")
+                ret = subprocess.run(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile]).returncode
+            else:
+                print(f"Non-injection event, but VOEvent {outfile} not created...")
+        else:
+            dc.set('test', args=asdict(d))
+    else:
+        print(f"Could not find {infile}, so no {outfile} made or event sent.")
+
+    # TODO: is this ASAP with updated position later? or wait to send with good position?
 
 
 def run_createstructure(d, lock=None):
@@ -272,11 +320,12 @@ def run_imloc(d, lock=None):
     """ Given DSACand (after candidate image MS), run image localization.
     """
 
-    print(f'Running localization (currently only posting to relay server) {d.trigname}')
-    LOGGER.info(f'Running localization (currently only posting to relay server) {d.trigname}')
+    print(f'Running localization on {d.trigname}')
+    LOGGER.info(f'Running localization on {d.trigname}')
 
-    if d['real'] and not d['injected']:
-        dc.set('observation', args=d)
+# TODO: is this the first sent or an update with good position?
+#    if d.real and not d.injected:
+#        dc.set('observation', args=asdict(d))
 
     d.writejson(outpath=OUTPUT_PATH, lock=lock)
     return d
@@ -304,11 +353,12 @@ def run_final(ds, lock=None):
     May also update etcd to notify of completion.
     """
 
-    d, d_po, d_hb, d_il, d_as = ds
-    d.update(d_po)
-    d.update(d_hb)
-    d.update(d_il)
-    d.update(d_as)
+#    d, d_po, d_hb, d_il, d_as = ds
+    d, d_fm, d_vc = ds
+    d.update(d_fm)
+    d.update(d_vc)
+#    d.update(d_il)
+#    d.update(d_as)
 
     print('Final merge of results for {0}'.format(d.trigname))
     LOGGER.info('Final merge of results for {0}'.format(d.trigname))

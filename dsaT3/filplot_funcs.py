@@ -13,7 +13,10 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import scipy.signal
 from scipy import stats
 import pandas
+from pandas.errors import EmptyDataError
 import h5py
+from time import sleep
+from retry import retry
 
 from sigpyproc.Readers import FilReader
 import slack_sdk as slack
@@ -215,7 +218,8 @@ def plotfour(dataft, datats, datadmt,
         axs[2][0].set_xlabel('Time (ms)')
                 
         if fnT2clust is not None:
-            T2object = pandas.read_csv(fnT2clust, on_bad_lines='warn')
+            T2object = get_T2object(fnT2clust)  # wrap with retry
+
             ind = np.where(np.abs(86400*(imjd-T2object.mjds[:]))<30.0)[0]
             ttsec = (T2object.mjds.values-imjd)*86400
             mappable = axs[2][1].scatter(ttsec[ind],
@@ -235,13 +239,13 @@ def plotfour(dataft, datats, datadmt,
     not_real = False
 
     if multibeam_dm0ts is not None:
-        if classification_dict['snr_dm0_allbeam']>0:
+        if classification_dict['snr_dm0_allbeam']>10:
             if classification_dict['snr_dm0_ibeam']>10.:
                 if classification_dict['prob']<0.25:
                     not_real = True
 
     try:
-        if classification_dict['prob']<0.01:
+        if classification_dict['prob']<0.05:
             not_real = True
     except:
         pass
@@ -261,7 +265,15 @@ def plotfour(dataft, datats, datadmt,
         plt.close(fig)
 
     return not_real
-        
+
+
+@retry(EmptyDataError, tries=5, delay=0.5)
+def get_T2object(fnT2clust):
+    """ wrap up pandas call with retry to handle missing file
+    """
+
+    return pandas.read_csv(fnT2clust, on_bad_lines='warn')
+
 
 def dm_transform(data, dm_max=20,
                  dm_min=0, dm0=None, ndm=64, 
@@ -539,6 +551,7 @@ def classify_freqtime(fnmodel, dataft):
     dataml = dataml/np.std(dataml)
     dataml[dataml!=dataml] = 0.0
     dataml = dataml[None,:,tlow:thigh, None]
+    print("Model shape:",dataml.shape)
     prob = float(model.predict(dataml)[0,1])
 
     return prob
@@ -703,7 +716,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
             except slack.errors.SlackApiError as exc:
                 print(f'SlackApiError!: {str(exc)}')
         else:
-            print(f"Not real. Not sending {figname} to slack")
+            print(f"Not real. Not sending {figname} to slack", prob)
 
     return figname, prob, real
 
@@ -791,6 +804,7 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
                              candname=trigname, fnT2clust=fnT2clust, imjd=timehr,
                              injected=injected, fast_classify=True)
     print("Probability of fast classification: %0.2f" % prob)
+    return prob
 #     real = not not_real
 
 #     if toslack:
