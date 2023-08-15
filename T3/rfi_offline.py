@@ -1,6 +1,7 @@
 import sys
 
-import numpy as np 
+import numpy as np
+import numpy.ma as ma
 import pandas as pd
 
 import analysis_tools
