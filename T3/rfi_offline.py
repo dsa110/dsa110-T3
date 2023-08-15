@@ -22,16 +22,16 @@ class RFI:
         are always known to be bad
         """
         if len(self.dumb_mask):
-            self.data[dumb_mask] = 0.0
+            self.data.mask[dumb_mask] = True
 
     def remove_bandpass_Tsys(self):
         """ Remove bandpass based on system temperature
         """
-        T_sys = np.mean(self.data, axis=1)
+        T_sys = np.mean(self.data.data, axis=1)
         bad_chans = T_sys < 0.001 * np.median(T_sys)
         T_sys[bad_chans] = 1
-        self.data /= T_sys[:,None]
-        self.data[bad_chans,:] = 0
+        self.data.data /= T_sys[:,None]
+        self.data.mask[bad_chans,:] = True
 
     def per_channel_sigmacut(self, frebin=1, sigma_thresh=3):
         """ Step through each channel and remove outlier time samples.
@@ -63,7 +63,7 @@ class RFI:
         """ Average over frequency to look 
         for DM=0 outliers in the timeseries. 
         """
-        dmzero = np.mean(self.data,0)
+        dmzero = np.mean(self.data.data,0)
         dmzero = dmzero - np.median(dmzero)
         s = pd.Series(dmzero)
         mad = np.mean(np.abs(s - s.mean()))
@@ -71,24 +71,26 @@ class RFI:
 
         # Find DM=0 outliers 
         bad_samp = np.where(np.abs(dmzero) > sigma_thresh*stdev)[0]
-        data_replace = np.mean(self.data, 1).repeat(len(bad_samp))
+        # data_replace = np.mean(self.data, 1).repeat(len(bad_samp))
 
-        # Replace bad samples with mean spectrum 
-        self.data[:, bad_samp] = data_replace.reshape(self.nfreq, 
-                                                      len(bad_samp))
+        # # Replace bad samples with mean spectrum 
+        # self.data[:, bad_samp] = data_replace.reshape(self.nfreq, 
+        #                                               len(bad_samp))
+        
+        self.data.mask[:, bad_samp] = True
 
     def variancecut(self, axis=0, sigma_thresh=3):
         """ Cut on variance outliers along specified
         axis 
         """
-        sig = np.std(self.data, axis=axis)
+        sig = np.std(self.data.data, axis=axis)
         sigsig = np.std(sig)
         meansig = np.mean(sig)
         ind = np.where(sig > meansig + sigma_thresh*sigsig)[0]
         if axis==0:
-            self.data[:, ind] = 0.0
+            self.data.mask[:, ind] = True
         elif axis==1:
-            self.data[ind] = 0.0
+            self.data.mask[ind] = True
 
     def detrend_data(self,axis=0,degree=4):
         """ Detrend data along specified axis
@@ -103,13 +105,13 @@ class RFI:
         else:
             assert "Expected axis=0 or axis=1"
 
-        p = np.polyfit(xval, np.mean(self.data,axis=meanaxis), 4)
+        p = np.polyfit(xval, np.mean(self.data.data,axis=meanaxis), 4)
         f = np.poly1d(p) 
 
         if axis==1:
-            self.data -= f(xval)[None]
+            self.data.data -= f(xval)[None]
         elif axis==0:
-            self.data -= f(xval)[:,None]
+            self.data.data -= f(xval)[:,None]
 
 def apply_rfi_filters_grex(data, sigma_thresh_chan=3.,
                            sigma_thresh_dm0=7., perchannel=False,
@@ -126,14 +128,18 @@ def apply_rfi_filters_grex(data, sigma_thresh_chan=3.,
     sigma_thesh_dm0 : float 
         threshold sigma in DM=0 timeseries 
     perchannel : bool 
-        clip on a per-channel timeseries basis. very slow, be warned. 
+        clip on a per-channel timeseries basis. very slow, be warned.
+    dumb_mask : list
+        list of channels to ignore 
 
     Returns:
     -------
     R.data : ndarray
         RFI cleaned data
     """
-    R = RFI(data, dumb_mask=dumb_mask)
+    mask = np.zeros_like(data, dtype=bool)
+    datamask = ma.masked_array(data, mask=mask)
+    R = RFI(datamask, dumb_mask=dumb_mask)
     R.remove_bandpass_Tsys()
 
     if perchannel:
