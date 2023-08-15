@@ -23,7 +23,7 @@ class RFI:
         are always known to be bad
         """
         if len(self.dumb_mask):
-            self.data.mask[dumb_mask] = True
+            self.data.mask[dumb_mask, :] = True
 
     def remove_bandpass_Tsys(self):
         """ Remove bandpass based on system temperature
@@ -139,7 +139,7 @@ def apply_rfi_filters_grex(data, sigma_thresh_chan=3.,
         RFI cleaned data
     """
     mask = np.zeros_like(data, dtype=bool)
-    datamask = ma.masked_array(data, mask=mask)
+    datamask = ma.masked_array(data.copy(), mask=mask)
     R = RFI(datamask, dumb_mask=dumb_mask)
     R.remove_bandpass_Tsys()
 
