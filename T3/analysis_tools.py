@@ -419,8 +419,6 @@ def voltage_to_stokes(data):
 
     return StokesI
 
-import jax.numpy as np
-from jax import jit
 
 @jit
 def shift_data(data, delay):
@@ -441,7 +439,7 @@ def shift_data(data, delay):
     """
     return np.roll(data, delay)
 
-def dedisperse(data, DM, f_low, f_high, dt, fref):
+def dedisperse(data, DM, f_low, f_high, dt, fref):    
     """
     Perform incoherent dedispersion on the input data.
 
@@ -461,6 +459,10 @@ def dedisperse(data, DM, f_low, f_high, dt, fref):
     array
         The dedispersed data, with the same shape as the input data.
     """
+
+    import jax.numpy as np
+    from jax import jit
+
     # Get the number of frequency channels and time samples
     nfreq, ntime = data.shape
 
