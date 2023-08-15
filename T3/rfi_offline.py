@@ -31,7 +31,7 @@ class RFI:
         T_sys = np.mean(self.data.data, axis=1)
         bad_chans = T_sys < 0.001 * np.median(T_sys)
         T_sys[bad_chans] = 1
-        self.data.data = self.data.data / T_sys[:,None]
+        self.data.data[:] /= T_sys[:,None]
         self.data.mask[bad_chans,:] = True
 
     def per_channel_sigmacut(self, frebin=1, sigma_thresh=3):
