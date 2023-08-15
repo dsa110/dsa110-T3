@@ -110,9 +110,9 @@ class RFI:
         f = np.poly1d(p) 
 
         if axis==1:
-            self.data.data -= f(xval)[None]
+            self.data.data[:] -= f(xval)[None]
         elif axis==0:
-            self.data.data -= f(xval)[:,None]
+            self.data.data[:] -= f(xval)[:,None]
 
 def apply_rfi_filters_grex(data, sigma_thresh_chan=3.,
                            sigma_thresh_dm0=7., perchannel=False,
