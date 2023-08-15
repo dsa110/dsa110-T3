@@ -92,7 +92,20 @@ class RFI:
         if axis==0:
             self.data.mask[:, ind] = True
         elif axis==1:
-            self.data.mask[self.dumb_mask_conjugate[ind]] = True
+            self.data.mask[np.array(self.dumb_mask_conjugate)[ind]] = True
+
+    def variancecut_freq2(self, axis=1, sigma_thresh=3):
+        """ Cut on variance outliers along specified
+        axis 
+        """
+        sig = np.std(self.data, axis=axis)
+        sigsig = np.std(sig)
+        meansig = np.median(sig)
+        ind = np.where(sig > meansig + sigma_thresh*sigsig)[0]
+        if axis==0:
+            self.data.mask[:, ind] = True
+        elif axis==1:
+            self.data.mask[ind] = True
 
     def variancecut_time(self, axis=0, sigma_thresh=3):
         """ Cut on variance outliers along specified
@@ -164,7 +177,11 @@ def apply_rfi_filters_grex(data, sigma_thresh_chan=3.,
     # Apply a cut on variance in time domain
     R.variancecut_time(axis=0, sigma_thresh=3)
     # Apply a cut on variance for frequency spectrum
-    R.variancecut_freq(axis=1, sigma_thresh=6)
+    R.variancecut_freq2(axis=1, sigma_thresh=3)
+    # Apply a cut on variance in time domain
+    R.variancecut_time(axis=0, sigma_thresh=5)
+    # Apply a cut on variance for frequency spectrum
+    R.variancecut_freq2(axis=1, sigma_thresh=5)
     # Sum over the frequency axis and cut on the DM=0 timeseries 
     R.dm_zero_filter(sigma_thresh_dm0)
     # Detrend time series with degree 4 polynomial 
