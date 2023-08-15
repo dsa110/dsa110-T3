@@ -112,7 +112,7 @@ class RFI:
             self.data -= f(xval)[:,None]
 
 def apply_rfi_filters_grex(data, sigma_thresh_chan=3.,
-                           sigma_thresh_dm0=7., perchannel=False
+                           sigma_thresh_dm0=7., perchannel=False,
                            dumb_mask=[]):
     """ Apply in sequence RFI filters and detrending 
     to time frequency intensity data. 
