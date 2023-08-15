@@ -65,7 +65,9 @@ class RFI:
         """
         dmzero = np.mean(self.data,0)
         dmzero = dmzero - np.median(dmzero)
-        stdev = 1.4826 * pd.Series(dmzero).mad()
+        s = pd.Series(dmzero)
+        mad = np.mean(np.abs(s - s.mean()))
+        stdev = 1.4826 * mad
 
         # Find DM=0 outliers 
         bad_samp = np.where(np.abs(dmzero) > sigma_thresh*stdev)[0]
