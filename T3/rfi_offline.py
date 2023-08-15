@@ -92,7 +92,7 @@ class RFI:
         if axis==0:
             self.data.mask[:, ind] = True
         elif axis==1:
-            self.data.mask[ind] = True
+            self.data.mask[self.dumb_mask_conjugate[ind]] = True
 
     def variancecut_time(self, axis=0, sigma_thresh=3):
         """ Cut on variance outliers along specified
