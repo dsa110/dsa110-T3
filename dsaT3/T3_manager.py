@@ -99,12 +99,13 @@ def run_filplot(d, wait=False, lock=None):
         d.ibeam_prob = filf.filplot_entry_fast(asdict(d), toslack=False, classify=True,
                                 rficlean=False, ndm=1, nfreq_plot=32, save_data=False,
                                 fllisting=None)
-        
-        if d.ibeam_prob > 0.95 and d.ibox < 16 and d.snr > 13:
+
+        # assuming inj8 DMs are untrustworthy. inj10 is always found as too wide (ibox=16)
+        if d.ibeam_prob > 0.95 and d.ibox < 16 and d.snr > 13 and not (d.dm > 624 and d.dm < 628):
             print('Running fast_response')
             fast_response(d)
         else:
-            print('Not running fast_response')
+            print('Not running fast_response. Event is too wide/weak/low-ibeam_prob/injected-dm.')
 
         d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False, classify=True)
     except Exception as exception:
