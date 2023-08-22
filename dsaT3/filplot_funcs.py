@@ -712,7 +712,11 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
         if not_real==False:
             print(f"Sending {figname} to slack")
             try:
-                slack_client.files_upload(channels='candidates', file=figname, initial_comment=figname)
+                if d.ibeam_prob > 0.95 and d.ibox < 16 and d.snr > 13 and not (d.dm > 624 and d.dm < 628):
+                    message = f"{os.path.basename(figname)} (VOEvent sent!)"
+                else:
+                    message = os.path.basename(figname)
+                slack_client.files_upload(channels='candidates', file=figname, initial_comment=message)
             except slack.errors.SlackApiError as exc:
                 print(f'SlackApiError!: {str(exc)}')
         else:
