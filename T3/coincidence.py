@@ -71,9 +71,9 @@ def get_coincidence_3stations(fncand1, fncand2, fncand3,
         mjd_arr_3 = staretools.get_mjd_cand(fncand3)
 
     # Find candidates that happened in past nday_lookback days
-    ind1 = np.where(mjd_arr_1>(Time.now().mjd-nday_lookback))[0]
-    ind2 = np.where(mjd_arr_2>(Time.now().mjd-nday_lookback))[0]
-    ind3 = np.where(mjd_arr_3>(Time.now().mjd-nday_lookback))[0]
+    ind1 = np.where((mjd_arr_1>(Time.now().mjd-nday_lookback)) & (mjd_arr_1<Time.now().mjd))[0]
+    ind2 = np.where((mjd_arr_2>(Time.now().mjd-nday_lookback)) & (mjd_arr_1<Time.now().mjd))[0]
+    ind3 = np.where((mjd_arr_3>(Time.now().mjd-nday_lookback)) & (mjd_arr_1<Time.now().mjd))[0]
 
     data_1, mjd_arr_1 = data_1.loc[ind1], mjd_arr_1[ind1]
     data_2, mjd_arr_2 = data_2.loc[ind2], mjd_arr_2[ind2]
