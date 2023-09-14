@@ -664,6 +664,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     timehr = trigger_dict['mjds']
     snr = trigger_dict['snr']
     injected = trigger_dict['injected']
+    ibeam_prob = trigger_dict['ibeam_prob']
     
     fnT2clust = f'{T2dir}/cluster_output.csv'
     fname = None
@@ -712,7 +713,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
         if not_real==False:
             print(f"Sending {figname} to slack")
             try:
-                if d.ibeam_prob > 0.95 and d.ibox < 16 and d.snr > 13 and not (d.dm > 624 and d.dm < 628):
+                if ibeam_prob > 0.95 and ibox < 16 and snr > 13 and not (dm > 624 and dm < 628):
                     message = f"{os.path.basename(figname)} (VOEvent sent!)"
                 else:
                     message = os.path.basename(figname)
