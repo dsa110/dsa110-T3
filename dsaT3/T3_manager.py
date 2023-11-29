@@ -148,7 +148,7 @@ def fast_response(d):
 
     ret = 1
     if os.path.exists(infile):
-        ret = subprocess.run(['dsaevent', 'create-voevent', infile, outfile]).returncode
+        ret = subprocess.run(['dsaevent', 'create-voevent', infile, outfile, '--production']).returncode
         if not d.injected:
             dc.set('observation', args=asdict(d))
             if ret == 0:
