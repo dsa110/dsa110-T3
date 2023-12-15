@@ -710,10 +710,10 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     real = not not_real
 
     if toslack:
-        if not_real==False:
+        if real:
             print(f"Sending {figname} to slack")
             try:
-                if ibeam_prob > 0.95 and ibox < 16 and snr > 13 and not (dm > 624 and dm < 628):
+                if ibeam_prob > 0.95 and ibox < 16 and snr > 13 and not (dm > 624 and dm < 628) and not injected:
                     message = f"{os.path.basename(figname)} (VOEvent sent!)"
                 else:
                     message = os.path.basename(figname)
