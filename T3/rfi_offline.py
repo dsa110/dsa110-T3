@@ -17,6 +17,7 @@ class RFI:
         self.data = data
         self.nfreq, self.ntime = data.shape 
         self.dumb_mask = dumb_mask
+        self.dumb_mask_conjugate = [i for i in range(0,  self.nfreq) if i not in self.dumb_mask]
 
     def apply_dumb_mask(self):
         """ Mask out channels that 
@@ -64,7 +65,7 @@ class RFI:
         """ Average over frequency to look 
         for DM=0 outliers in the timeseries. 
         """
-        dmzero = np.mean(self.data.data,0)
+        dmzero = np.mean(self.data,0)
         dmzero = dmzero - np.median(dmzero)
         s = pd.Series(dmzero)
         mad = np.mean(np.abs(s - s.mean()))
@@ -80,7 +81,20 @@ class RFI:
         
         self.data.mask[:, bad_samp] = True
 
-    def variancecut(self, axis=0, sigma_thresh=3):
+    def variancecut_freq(self, axis=1, sigma_thresh=3):
+        """ Cut on variance outliers along specified
+        axis 
+        """
+        sig = np.std(self.data, axis=axis)
+        sigsig = np.std(sig)
+        meansig = np.median(sig)
+        ind = np.where(sig > meansig + sigma_thresh*sigsig)[0]
+        if axis==0:
+            self.data.mask[:, ind] = True
+        elif axis==1:
+            self.data.mask[ind] = True
+
+    def variancecut_time(self, axis=0, sigma_thresh=3):
         """ Cut on variance outliers along specified
         axis 
         """
@@ -148,9 +162,13 @@ def apply_rfi_filters_grex(data, sigma_thresh_chan=3.,
         R.per_channel_sigmacut(1, sigma_thresh_chan)
 
     # Apply a cut on variance in time domain
-    R.variancecut(axis=0, sigma_thresh=3)
+    R.variancecut_time(axis=0, sigma_thresh=3)
     # Apply a cut on variance for frequency spectrum
-    R.variancecut(axis=1, sigma_thresh=6)
+    R.variancecut_freq(axis=1, sigma_thresh=3)
+    # Apply a cut on variance in time domain
+    R.variancecut_time(axis=0, sigma_thresh=5)
+    # Apply a cut on variance for frequency spectrum
+    R.variancecut_freq(axis=1, sigma_thresh=5)
     # Sum over the frequency axis and cut on the DM=0 timeseries 
     R.dm_zero_filter(sigma_thresh_dm0)
     # Detrend time series with degree 4 polynomial 
@@ -159,7 +177,6 @@ def apply_rfi_filters_grex(data, sigma_thresh_chan=3.,
     R.detrend_data(axis=1,degree=4)
     
     return R.data 
-
 
 if __name__=='__main__':
     fn_fil = sys.argv[1]
