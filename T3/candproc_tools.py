@@ -89,7 +89,7 @@ def read_voltage_data(file_name, timedownsample=None,
 
 def read_proc_fil(fnfil, dm=0, tcand=2.0, 
                   width=1, device=0, tstart=0,
-                  tstop=10, ndm=32, dmtime_transform=True):
+                  tstop=10, ndm=32, dmtime_transform=False):
     """ Read in a filterbank file with the 
     YOUR library, dedisperse it, and return the 
     dedispsered object.

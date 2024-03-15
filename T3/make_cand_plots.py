@@ -67,6 +67,26 @@ def plotfour_grex(cand):
 
     plt.savefig(fignameout)
 
+def proc_and_plot_candidate(fnvoltage):
+
+    if not os.path.exists(fnvoltage):
+        print("ERR: File %s does not exist" % fnvoltage)
+        return
+
+    stokesi_obj = ctools.read_voltage_data(fnvoltage, 
+                                    timedownsample=2**4,
+                                    freqdownsample=None)
+    print('Finished reading in %s' % fnvoltage)
+    
+    ctools.write_sigproc(fnfil, stokesi_obj)
+    print('Wrote to %s' % fnfil)
+
+    cand = cpt.read_proc_fil(fnfil, dm=100.0, tcand=10.4,width=1,
+                             device=0, tstart=0,tstop=20,
+                             ndm=32, dmtime_transform=True)
+    print('Finished dedispersion')
+    plotfour(cand)
+
 def plotfour(dataft, datadmt, cand_heim,
              beam_time_arr=None, figname_out=None, dm=0,
              dms=[0,1], 
