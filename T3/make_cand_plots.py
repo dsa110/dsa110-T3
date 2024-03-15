@@ -8,12 +8,64 @@ from astropy import units as u
 import glob
 import time
 
-import staretools 
+import candproc_tools as ctools
 
-def rsync_heimdall_cand():
-    os.system("rsync -avzhe ssh user@158.154.14.10:/home/user/cand_times_sync/ /home/user/cand_times_sync");
-    os.system("rsync -avzhe ssh user@166.140.120.248:/home/user/cand_times_sync/ /home/user/cand_times_sync_od");
-    time.sleep(60)
+def plotfour_grex(cand):
+    """ Plot the four plots for a candidate.
+    """
+    cand_dir = '/hdd/data/candidates/T3/candplots/'
+    fignameout = cand_dir + cand.your_file.split('/')[-1].strip('.fil') + '.pdf'
+
+    fncluster = '/hdd/data/candidates/T2/cluster_output.csv'
+    cluster_output = pd.read_csv(fncluster)
+    ind_clust = np.where(np.abs(cluster_output['mjds'] - 10.) < 10.0)[0]
+    cluster_output = cluster_output.loc[ind_clust]
+
+    ntime, nchans = cand.data.shape[0], cand.data.shape[1]
+    times = np.linspace(0,cand.tsamp*ntime,ntime)
+    freqs = np.linspace(cand.fch1, cand.fch1+cand.foff*nchans, nchans)
+
+    data_timesteam = cand.dedispersed.mean(1)
+    mm = np.argmax(data_timesteam)
+    data_timesteam = data_timesteam[mm-256:mm+256]
+    data_freqtime = cand.dedispersed[mm-256:mm+256, 300:-300]
+    data_freqtime = data_freqtime - np.mean(data_freqtime, 
+                                            axis=0, keepdims=True)
+    data_freqtime = data_freqtime.T
+    data_dmt = cand.dmt[:, mm-256:mm+256]
+    data_dmt = data_dmt - np.mean(data_dmt, axis=1, keepdims=True)
+
+    times = times[mm-256:mm+256]
+    tmin, tmax = times[0], times[-1]
+    freqmin, freqmax = freqs[0], freqs[-1]
+
+    fig = plt.figure(figsize=(8,10))
+    plt.subplot(221)
+    extentft=[tmin,tmax,freqmin,freqmax]
+    plt.imshow(data_freqtime, aspect='auto', 
+               interpolation='nearest', extent=extentft)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Freq (MHz)')
+
+    plt.subplot(222)
+    extentdmt=[tmin, tmax, 0, 1]
+    plt.imshow(data_dmt, aspect='auto', 
+               interpolation='nearest', extent=extentdmt)
+    plt.xlabel('Time (s)')
+    plt.ylabel('DM (pc cm^-3)')
+
+    plt.subplot(223)
+    plt.plot(times, data_timesteam)
+    plt.xlabel('Time (s)')
+
+    plt.subplot(224)
+    plt.scatter(cluster_output['mjds'], cluster_output['dm'],
+                s=1,c=cluster_output['snr'], vmin=8, vmax=50.)
+    plt.grid('on', alpha=0.25)
+    plt.ylabel('DM (pc cm^-3)')
+    plt.xlabel('Time (MJD)')
+
+    plt.savefig(fignameout)
 
 def plotfour(dataft, datadmt, cand_heim,
              beam_time_arr=None, figname_out=None, dm=0,
@@ -120,19 +172,16 @@ def plotfour(dataft, datadmt, cand_heim,
 #        plt.xlabel('freq [MHz]')
 
     plt.subplot(224)
-    plt.scatter(cand_heim['time_sec'], cand_heim['dm'], 3, 
-                c=cand_heim['snr'], 
-                cmap='RdBu', vmax=15., vmin=6.0)
-    plt.colorbar(label=r'SNR')
-    plt.scatter(time_sec_ii, dm,
-                s=100, marker='s',
-                facecolor='none', edgecolor='black')
-    plt.xlabel('Time (s)')
-    plt.ylabel('DM')
+    # plt.scatter(cand_heim['time_sec'], cand_heim['dm'], 3, 
+    #             c=cand_heim['snr'], 
+    #             cmap='RdBu', vmax=15., vmin=6.0)
+    # plt.colorbar(label=r'SNR')
+    # plt.scatter(time_sec_ii, dm,
+    #             s=100, marker='s',
+    #             facecolor='none', edgecolor='black')
+    # plt.xlabel('Time (s)')
+    # plt.ylabel('DM')
 
-    # not_real = False
-
-    # plt.suptitle(suptitle, color='C1')
     # plt.tight_layout()
     if figname_out is not None:
         try:
