@@ -6,7 +6,8 @@ import shutil
 
 import logging
 
-logfile = '/home/user/connor/GReX-T3/services/clear_disks.log'
+logfile = '/var/log/grexpipeline/clear_disks.log'
+voltage_dir = '/hdd/data/voltages/'
 
 # Configure the logger
 logging.basicConfig(filename=logfile,
@@ -19,7 +20,6 @@ logging.info('Starting clear disks service')
 
 disk_limit = 2000
 disk_limit_bytes = 1024**3 * disk_limit # Convert GB into bytes
-voltage_dir = '/hdd/data/voltages/'
 
 while True:
     # Replace '/' with 'C:/' on Windows
