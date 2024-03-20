@@ -6,8 +6,8 @@ import shutil
 
 import logging
 
-logfile = '/var/log/grexpipeline/clear_disks.log'
-voltage_dir = '/hdd/data/voltages/'
+logfile = '/home/user/connor/GReX-T3/services/clear_disks.log'
+voltage_dir = os.getenv('GREX_VOLTAGE_DIR') # This is defined in the .service file
 
 # Configure the logger
 logging.basicConfig(filename=logfile,
