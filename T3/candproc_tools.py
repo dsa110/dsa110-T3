@@ -79,7 +79,7 @@ def read_voltage_data(file_name, timedownsample=None,
 
     # Compute in parallel (if using Dask)
     stokesi = stokesi.compute()
-
+    
     if timedownsample is not None:
         stokesi = stokesi.coarsen(time=int(timedownsample), boundary='trim').mean()
     if freqdownsample is not None:
@@ -89,6 +89,7 @@ def read_voltage_data(file_name, timedownsample=None,
 
 def read_proc_fil(fnfil, dm=0, tcand=2.0, 
                   width=1, device=0, tstart=0,
+                  zero_topbottom=True,
                   tstop=10, ndm=32, dmtime_transform=False):
     """ Read in a filterbank file with the 
     YOUR library, dedisperse it, and return the 
@@ -130,7 +131,15 @@ def read_proc_fil(fnfil, dm=0, tcand=2.0,
         snr=12,
         device=device,
     )
+    
     cand.get_chunk(tstart, tstop)
+
+    if zero_topbottom:
+        print("Zeroing out <1300 MHz and >1490 MHz")
+        freq = np.linspace(cand.fch1, cand.fch1 + cand.bw, cand.nchans)
+        bandpass_mask = np.where((freq < 1300.) | (freq > 1490.))[0]
+        cand.data[:,bandpass_mask] = 0.
+        
     cand.dedisperse(target="GPU")
 
     if dmtime_transform:
