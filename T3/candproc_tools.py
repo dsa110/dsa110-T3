@@ -139,8 +139,9 @@ def read_proc_fil(fnfil, dm=0, tcand=2.0,
         freq = np.linspace(cand.fch1, cand.fch1 + cand.bw, cand.nchans)
         bandpass_mask = np.where((freq < 1300.) | (freq > 1490.))[0]
         cand.data[:,bandpass_mask] = 0.
-        
-    cand.dedisperse(target="GPU")
+
+    if dm != 0:
+        cand.dedisperse(target="GPU")
 
     if dmtime_transform:
         cand.dmtime(ndm, target='GPU')
