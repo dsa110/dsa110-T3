@@ -69,7 +69,7 @@ def read_voltage_data(file_name, timedownsample=None,
     stokesi : xarray.DataArray
         The Stokes I data object
     """
-    ds = xarray.open_dataset(file_name, chunks={"time": 1000})
+    ds = xarray.open_dataset(file_name, chunks={"time": 2048})
 
     # Create complex numbers from Re/Im
     voltages = ds["voltages"].sel(reim="real") + ds["voltages"].sel(reim="imaginary") * 1j

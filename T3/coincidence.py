@@ -10,6 +10,7 @@ import pandas as pd
 from astropy import units as u 
 from astropy.time import Time
 from sigpyproc.Readers import FilReader
+import paramiko
 
 import staretools 
 
@@ -17,6 +18,56 @@ def rsync_heimdall_cand():
     os.system("rsync -avzhe ssh user@158.154.14.10:/home/user/cand_times_sync/ /home/user/cand_times_sync");
     os.system("rsync -avzhe ssh user@166.140.120.248:/home/user/cand_times_sync/ /home/user/cand_times_sync_od");
     time.sleep(60)
+
+def fetch_external_cands(hostname='158.154.14.10', port=22, 
+                        username='user', 
+                        password='None', 
+                        file_path='/home/user/cand_times_sync/heimdall_3.cand',
+                        ncand=10):
+    """Fetch the last N lines of a Heimdall candidate file on a remote server"""
+
+    try:
+        client.close()
+    except:
+        pass
+    # Initialize the SSH client
+    client = paramiko.SSHClient()
+    
+    # Add the server's SSH key automatically if it's missing
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+    try:
+        # Connect to the SSH server
+        client.connect(hostname, port=port, username=username, password=password)
+        
+        # Command to fetch the last 10 lines of the file
+        command = f"tail -n {ncand} {file_path}"
+        
+        # Execute the command
+        stdin, stdout, stderr = client.exec_command(command)
+        
+        # Read the output from stdout
+        lines = stdout.read()
+        
+        data_strings = lines.decode('utf-8').split('\n')
+        # Split each string into a list of values
+        data = [line.split() for line in data_strings if line.strip()]
+
+        # Convert the list of lists into a DataFrame
+        df = pd.DataFrame(data, index=None)
+
+        # Optionally, specify column names if known
+        df.columns = ['snr','cand','time_sec',
+                    'log2width','unknown2','dm',
+                    'unknown3','mjdx','mjd_day',
+                    'mjd_hr','mjd_min','mjd_sec']
+
+        return df
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        # Close the connection
+        client.close()
 
 def coincidence_2pt(mjd_arr_1, mjd_arr_2, t_thresh_sec=0.25):
     n1 = len(mjd_arr_1)
