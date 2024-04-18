@@ -53,7 +53,7 @@ def fetch_external_cands(hostname='158.154.14.10', port=22,
         data = [line.split() for line in data_strings if line.strip()]
 
         # Convert the list of lists into a DataFrame
-        df = pd.DataFrame(data, index=None)
+        df = pd.DataFrame(data, index=None).astype(float)
 
         # Optionally, specify column names if known
         df.columns = ['snr','cand','time_sec',
