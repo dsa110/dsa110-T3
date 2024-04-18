@@ -4,3 +4,4 @@ dsa110_T3.egg-info/*
 RELEASE-VERSION
 .vscode/settings.json
 *~
+*.pyc
