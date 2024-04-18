@@ -30,6 +30,7 @@ def fetch_external_cands(hostname='158.154.14.10', port=22,
         client.close()
     except:
         pass
+    
     # Initialize the SSH client
     client = paramiko.SSHClient()
     
