@@ -2,7 +2,7 @@ import os
 
 import time
 import numpy as np 
-from sigpyproc.readers import FilReader
+#from sigpyproc.readers import FilReader
 import pandas as pd
 from astropy.time import Time
 from astropy import units as u
