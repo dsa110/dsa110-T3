@@ -7,12 +7,10 @@ import matplotlib.pylab as plt
 import glob
 import pandas as pd 
 
-from astropy import units as u 
 from astropy.time import Time
-from sigpyproc.Readers import FilReader
 import paramiko
 
-import staretools 
+from T3 import analysis_tools 
 
 def rsync_heimdall_cand():
     os.system("rsync -avzhe ssh user@158.154.14.10:/home/user/cand_times_sync/ /home/user/cand_times_sync");
@@ -109,18 +107,18 @@ def get_coincidence_3stations(fncand1, fncand2, fncand3,
     """
 
     # Read in candidates
-    data_1 = staretools.read_heim_pandas(fncand1, skiprows=0)
-    data_2 = staretools.read_heim_pandas(fncand2, skiprows=0)
-    data_3 = staretools.read_heim_pandas(fncand3, skiprows=0)
+    data_1 = analysis_tools.read_heim_pandas(fncand1, skiprows=0)
+    data_2 = analysis_tools.read_heim_pandas(fncand2, skiprows=0)
+    data_3 = analysis_tools.read_heim_pandas(fncand3, skiprows=0)
 
-    mjd_arr_1 = staretools.get_mjd_cand_pd(data_1).values
-    mjd_arr_2 = staretools.get_mjd_cand_pd(data_2).values
+    mjd_arr_1 = analysis_tools.get_mjd_cand_pd(data_1).values
+    mjd_arr_2 = analysis_tools.get_mjd_cand_pd(data_2).values
 
     try:
-        mjd_arr_3 = staretools.get_mjd_cand_pd(data_3).values
+        mjd_arr_3 = analysis_tools.get_mjd_cand_pd(data_3).values
     except:
         print("Could not read fncand3 MJDs as pandas df")
-        mjd_arr_3 = staretools.get_mjd_cand(fncand3)
+        mjd_arr_3 = analysis_tools.get_mjd_cand(fncand3)
 
     # Find candidates that happened in past nday_lookback days
     ind1 = np.where((mjd_arr_1>(Time.now().mjd-nday_lookback)) & (mjd_arr_1<Time.now().mjd))[0]
