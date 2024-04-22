@@ -50,10 +50,10 @@ def get_mjd_cand(fncand):
 
     return np.array(mjd_arr)
 
-def get_mjd_cand_pd(data):
+def get_mjd_cand_pd(data, offset_utc_hours=7):
     """ Get MJD array from pandas dataframe  
     """
-    mjd = data['mjd_day']+(data['mjd_hr']+data['mjd_min']/60.+data['mjd_sec']/3600.)/24.
+    mjd = data['mjd_day']+(data['mjd_hr']+offset_utc_hours+data['mjd_min']/60.+data['mjd_sec']/3600.)/24.
 
     return mjd
 

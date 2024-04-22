@@ -68,17 +68,59 @@ def fetch_external_cands(hostname='158.154.14.10', port=22,
         # Close the connection
         client.close()
 
-def coincidence_2pt(mjd_arr_1, mjd_arr_2, t_thresh_sec=0.25):
+def coincidence_grex_stare(offset_utc_hours=7):
+    """Find coincidences between GREX and STARE candidates"""
+    cands_stare = fetch_external_cands(hostname='158.154.14.10', port=22, 
+                                        username='user', 
+                                        password='None', 
+                                        file_path='/home/user/cand_times_sync/heimdall_3.cand',
+                                        ncand=1000,
+                                        )
+
+    cands_grex = pd.read_csv('/hdd/data/candidates/T2/cluster_output.csv')
+
+    mjd_stare = analysis_tools.get_mjd_cand_pd(cands_stare, 
+                                               offset_utc_hours=offset_utc_hours).values
+    dms_stare = cands_stare['dm'].values
+
+    mjd_grex = cands_grex['mjds']
+    dms_grex = cands_grex['dm']
+
+    print(Time.now().mjd, mjd_grex.max(), mjd_stare.max())
+
+    coince_arr = coincidence_2pt(mjd_grex, mjd_stare, 
+                    dms_grex, dms_stare, 
+                    t_thresh_sec=0.25)
+
+    if len(coince_arr)==0:
+        print("No coincidences found")
+        return
+    else:
+        print("Found %d coincidences"%len(coince_arr))
+        return
+
+def while_loop():
+    
+    while True:
+        coincidence_grex_stare()
+        time.sleep(10)
+
+def coincidence_2pt(mjd_arr_1, mjd_arr_2, 
+                    dm_arr_1, dm_arr_2, 
+                    t_thresh_sec=0.25):
     n1 = len(mjd_arr_1)
     n2 = len(mjd_arr_2)
     coincidence_arr = []
 
     if n1<=n2:
         for ii in range(n1):
-#            if ii % 1000==0:
-#                print("%d/%d"%(ii,n1))
+            if ii % 10==0:
+                print("%d/%d"%(ii,n1))
             min_ind = np.argmin(np.abs(mjd_arr_1[ii]-mjd_arr_2))
             min_t = np.abs(mjd_arr_1[ii] - mjd_arr_2[min_ind])*86400
+
+            print(min_t)
+
             if min_t < t_thresh_sec:
                 coincidence_arr.append((ii, min_ind, min_t))
 
@@ -86,10 +128,11 @@ def coincidence_2pt(mjd_arr_1, mjd_arr_2, t_thresh_sec=0.25):
 
     if n2<n1:
         for ii in range(n2):
-#            if ii % 1000==0:
-#                print("%d/%d"%(ii,n2))
+            if ii % 1000==0:
+                print("%d/%d"%(ii,n2))
             min_ind = np.argmin(np.abs(mjd_arr_2[ii]-mjd_arr_1))
             min_t = np.abs(mjd_arr_2[ii] - mjd_arr_1[min_ind])*86400
+            print(min_t)
             if min_t < t_thresh_sec:
                 coincidence_arr.append((min_ind, ii, min_t))
 
