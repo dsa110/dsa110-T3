@@ -68,13 +68,13 @@ def fetch_external_cands(hostname='158.154.14.10', port=22,
         # Close the connection
         client.close()
 
-def coincidence_grex_stare(offset_utc_hours=7):
+def coincidence_grex_stare(offset_utc_hours=7, t_thresh_sec=0.50):
     """Find coincidences between GREX and STARE candidates"""
     cands_stare = fetch_external_cands(hostname='158.154.14.10', port=22, 
                                         username='user', 
                                         password='None', 
                                         file_path='/home/user/cand_times_sync/heimdall_3.cand',
-                                        ncand=1000,
+                                        ncand=100,
                                         )
 
     cands_grex = pd.read_csv('/hdd/data/candidates/T2/cluster_output.csv')
@@ -89,8 +89,8 @@ def coincidence_grex_stare(offset_utc_hours=7):
     print(Time.now().mjd, mjd_grex.max(), mjd_stare.max())
 
     coince_arr = coincidence_2pt(mjd_grex, mjd_stare, 
-                    dms_grex, dms_stare, 
-                    t_thresh_sec=0.25)
+                                dms_grex, dms_stare, 
+                                t_thresh_sec=t_thresh_sec)
 
     if len(coince_arr)==0:
         print("No coincidences found")
@@ -99,44 +99,37 @@ def coincidence_grex_stare(offset_utc_hours=7):
         print("Found %d coincidences"%len(coince_arr))
         return
 
-def while_loop():
+def run_coincidencer():
     
     while True:
         coincidence_grex_stare()
-        time.sleep(10)
+        time.sleep(2.5)
 
 def coincidence_2pt(mjd_arr_1, mjd_arr_2, 
                     dm_arr_1, dm_arr_2, 
                     t_thresh_sec=0.25):
-    n1 = len(mjd_arr_1)
-    n2 = len(mjd_arr_2)
+    n_cand_1 = len(mjd_arr_1)
+    n_cand_2 = len(mjd_arr_2)
     coincidence_arr = []
 
-    if n1<=n2:
-        for ii in range(n1):
-            if ii % 10==0:
-                print("%d/%d"%(ii,n1))
+    if n_cand_1<=n_cand_2:
+        for ii in range(n_cand_1):
             min_ind = np.argmin(np.abs(mjd_arr_1[ii]-mjd_arr_2))
             min_t = np.abs(mjd_arr_1[ii] - mjd_arr_2[min_ind])*86400
-
-            print(min_t)
-
             if min_t < t_thresh_sec:
                 coincidence_arr.append((ii, min_ind, min_t))
 
-        return np.array(coincidence_arr)
+        return pd.DataFrame(np.array(coincidence_arr), columns=('Index1','Index2','t_diff_seconds'))
 
-    if n2<n1:
-        for ii in range(n2):
-            if ii % 1000==0:
-                print("%d/%d"%(ii,n2))
+    if n_cand_2<n_cand_1:
+        for ii in range(n_cand_2):
             min_ind = np.argmin(np.abs(mjd_arr_2[ii]-mjd_arr_1))
             min_t = np.abs(mjd_arr_2[ii] - mjd_arr_1[min_ind])*86400
-            print(min_t)
+
             if min_t < t_thresh_sec:
                 coincidence_arr.append((min_ind, ii, min_t))
-
-        return np.array(coincidence_arr)
+    
+        return pd.DataFrame(np.array(coincidence_arr), columns=('Index1','Index2','t_diff_seconds'))
 
 def get_coincidence_3stations(fncand1, fncand2, fncand3, 
                               t_thresh_sec=0.25, 
@@ -402,12 +395,13 @@ def main(nday_lookback):
     return outdir
 
 if __name__=='__main__':
-    try:
-        nday_lookback = float(sys.argv[1])
-    except:
-        nday_lookback = 1.
+    # try:
+    #     nday_lookback = float(sys.argv[1])
+    # except:
+    #     nday_lookback = 1.
 
-    outdir = main(nday_lookback)
+    # outdir = main(nday_lookback)
+    pass
 
 
 
