@@ -1,2 +1,2 @@
-# dsa110-T3
-Management of the DSA110 T3 subsystem, including verification of candidate bursts.
+# GReX-T3
+The T3 subsystem is meant to process single-pulse candidates after detection and clustering. T3 will coincidence with other GReX terminals within a cluster, classify dynamic spectra with an ML model, and plot events.
