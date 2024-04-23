@@ -36,8 +36,6 @@ class MyHandler(FileSystemEventHandler):
         try:
             with open(file_path, 'r') as file:
                 data = json.load(file)
-                print("Read JSON data:")
-                print(json.dumps(data, indent=4))
         except Exception as e:
             print(f'Failed to read JSON file {file_path}: {e}')
             return
@@ -62,7 +60,7 @@ class MyHandler(FileSystemEventHandler):
 
 def check_for_newtrigger():
     # Set the directory you want to watch
-
+    print("Starting coincidencing")
     observer = Observer()
     observer.schedule(MyHandler(), T2_dir, recursive=False)
     observer.start()
