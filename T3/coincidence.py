@@ -9,15 +9,65 @@ import pandas as pd
 
 from astropy.time import Time
 import paramiko
+import json
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 from T3 import analysis_tools 
 
 fn_cluster_t2 = '/hdd/data/candidates/T2/cluster_output.csv'
+fn_out_coincidence = '/hdd/data/candidates/T3/coincidence/coincidence.csv'
+T2_dir = "/hdd/data/candidates/T2/"
 
-def rsync_heimdall_cand():
-    os.system("rsync -avzhe ssh user@158.154.14.10:/home/user/cand_times_sync/ /home/user/cand_times_sync");
-    os.system("rsync -avzhe ssh user@166.140.120.248:/home/user/cand_times_sync/ /home/user/cand_times_sync_od");
-    time.sleep(60)
+class MyHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        # This function is called when a new file is created
+        if event.is_directory:
+            return
+        if event.src_path.endswith('.json'):
+            print(f'New JSON file detected: {event.src_path}')
+            self.read_json(event.src_path)
+
+    def read_json(self, file_path):
+        # Function to read JSON file
+        try:
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+                print("Read JSON data:")
+                print(json.dumps(data, indent=4))
+        except Exception as e:
+            print(f'Failed to read JSON file {file_path}: {e}')
+
+        self.coincidence_json(data)
+
+    def coincidence_json(self,data):
+        datadf = pd.DataFrame.from_dict(data, orient='index')
+        # Reset the index to make it a column
+        datadf.reset_index(inplace=True)
+        # Name the new column
+        datadf.rename(columns={'index': 'trigger'}, inplace=True)
+        coincidence_array = coincidence_grex_stare(offset_utc_hours=7, t_thresh_sec=1.0, 
+                           ncand_query=250, dm_diff_thresh=50.0, total_rows=0,
+                           cands_grex=datadf)[0]
+        
+        if len(coincidence_array):
+            file_exists = os.path.isfile(fn_out_coincidence)
+            coincidence_array.to_csv(fn_out_coincidence, mode='a' if file_exists else 'w', \
+                                     header=not file_exists, index=False)
+
+def check_for_newtrigger():
+    # Set the directory you want to watch
+
+    observer = Observer()
+    observer.schedule(MyHandler(), T2_dir, recursive=False)
+    observer.start()
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
 
 def fetch_external_cands(hostname='158.154.14.10', port=22, 
                         username='user', 
@@ -71,7 +121,8 @@ def fetch_external_cands(hostname='158.154.14.10', port=22,
         client.close()
 
 def coincidence_grex_stare(offset_utc_hours=7, t_thresh_sec=1.0, 
-                           ncand_query=250, dm_diff_thresh=25., total_rows=0):
+                           ncand_query=250, dm_diff_thresh=25., total_rows=0,
+                           cands_grex=None):
     """Find coincidences between GREX and STARE candidates"""
     cands_stare = fetch_external_cands(hostname='158.154.14.10', port=22, 
                                         username='user', 
@@ -80,34 +131,41 @@ def coincidence_grex_stare(offset_utc_hours=7, t_thresh_sec=1.0,
                                         ncand=ncand_query,
                                         )
     
-    # Step 1: Determine the number of rows in the file
-    with open(fn_cluster_t2, 'r') as file:
-        total_rows_now = sum(1 for row in file)
+    if cands_grex is None:
+        # Step 1: Determine the number of rows in the file
+        with open(fn_cluster_t2, 'r') as file:
+            total_rows_now = sum(1 for row in file)
 
-    if total_rows_now - total_rows < 10:
-        print("Too few new candidates...")
-        return [], total_rows
+        if total_rows_now - total_rows < 10:
+            print("Too few new candidates...")
+            #return [], total_rows
+        else:
+            read_last_N = total_rows_now - total_rows
+
+        # Step 2: Skip the first N-100 rows
+        skip = max(1, total_rows_now - read_last_N)
+
+        # Skip the first 1000 rows, but keep the Header
+        cands_grex = pd.read_csv(fn_cluster_t2, skiprows=lambda x: x < skip and x != 0)
+        cands_grex = cands_grex.iloc[np.where(cands_grex['trigger']!='0')[0]]
+
+        if cands_grex.empty:
+            print("No triggered candidates in GREX T2 data")
+            return [], total_rows_now
     else:
-        read_last_N = total_rows_now - total_rows
-
-    # Step 2: Skip the first N-100 rows
-    skip = max(1, total_rows_now - read_last_N)
-
-    # Skip the first 1000 rows, but keep the Header
-    cands_grex = pd.read_csv(fn_cluster_t2, skiprows=lambda x: x < skip and x != 0)
-    cands_grex = cands_grex.iloc[np.where(cands_grex['trigger']!='0')[0]]
-
-    if cands_grex.empty:
-        print("No triggered candidates in GREX T2 data")
-        return [], total_rows_now
+        # If sending a single source from .json, assume total rows is 0
+        total_rows_now = 0
 
     mjd_stare = analysis_tools.get_mjd_cand_pd(cands_stare, 
                                                offset_utc_hours=offset_utc_hours).values
     dms_stare = cands_stare['dm'].values
     candname_stare = cands_stare['cand'].values
+    snr_stare = cands_stare['snr'].values
 
     coincidence_array = coincidence_grex_dumps(cands_grex, mjd_stare, dms_stare, candname_stare,
-                              t_thresh_sec=t_thresh_sec, dm_diff_thresh=dm_diff_thresh)
+                                               snr_stare,
+                                              t_thresh_sec=t_thresh_sec, 
+                                              dm_diff_thresh=dm_diff_thresh)
 
     if len(coincidence_array)==0:
         print("No coincidences found")
@@ -116,7 +174,7 @@ def coincidence_grex_stare(offset_utc_hours=7, t_thresh_sec=1.0,
     
     return coincidence_array, total_rows_now
 
-def run_coincidencer(fn_out_coincidence='/hdd/data/candidates/T3/coincidence.csv',
+def run_coincidencer(fn_out_coincidence='/hdd/data/candidates/T3/coincidence/coincidence.csv',
                      t_thresh_sec=0.50,
                      offset_utc_hours=7.0,
                      dm_diff_thresh=25.0,):
@@ -125,7 +183,8 @@ def run_coincidencer(fn_out_coincidence='/hdd/data/candidates/T3/coincidence.csv
     while True:
         coincidence_array, total_rows = coincidence_grex_stare(t_thresh_sec=t_thresh_sec,
                                                    offset_utc_hours=offset_utc_hours,
-                                                   dm_diff_thresh=dm_diff_thresh, total_rows=total_rows)
+                                                   dm_diff_thresh=dm_diff_thresh, 
+                                                   total_rows=total_rows)
                 
         if len(coincidence_array):
             file_exists = os.path.isfile(fn_out_coincidence)
@@ -138,6 +197,7 @@ def run_coincidencer(fn_out_coincidence='/hdd/data/candidates/T3/coincidence.csv
             continue
 
 def coincidence_grex_dumps(cands_grex, mjd_stare, dms_stare, candname_stare,
+                           snr_stare,
                            t_thresh_sec=0.50, dm_diff_thresh=25.0):
     """ Find coincidences between GREX and STARE candidates.
     Step through each GREX trigger and find the STARE candidates 
@@ -153,61 +213,19 @@ def coincidence_grex_dumps(cands_grex, mjd_stare, dms_stare, candname_stare,
         delta_dm = np.abs(dms_grex.iloc[ii]-dms_stare)
 
         ind_coince = np.where((delta_t_sec<t_thresh_sec) & (delta_dm<dm_diff_thresh))[0]
-
+        
         if len(ind_coince):
-            for jj in range(len(ind_coince)):
-                cands_grex.loc[locii, 'STAREMJD'] = mjd_stare[ind_coince[jj]]#, dms_stare[ind_coince[jj]])
-                cands_grex.loc[locii, 'STAREDM'] = dms_stare[ind_coince[jj]]
-                cands_grex.loc[locii, 'STARECAND'] = candname_stare[ind_coince[jj]]
+            jj = np.argmax(snr_stare[ind_coince])
+            cands_grex.loc[locii, 'STAREMJD'] = mjd_stare[ind_coince[jj]]
+            cands_grex.loc[locii, 'STAREDM'] = dms_stare[ind_coince[jj]]
+            cands_grex.loc[locii, 'STARECAND'] = candname_stare[ind_coince[jj]]
+            cands_grex.loc[locii, 'STARESNR'] = snr_stare[ind_coince[jj]]
         else:
             delete_index.append(locii)
 
     cands_grex_coincident = cands_grex.drop(delete_index)
 
     return cands_grex_coincident
-
-def coincidence_2pt(mjd_arr_1, mjd_arr_2, 
-                    dm_arr_1, dm_arr_2, 
-                    t_thresh_sec=0.25):
-    n_cand_1 = len(mjd_arr_1)
-    n_cand_2 = len(mjd_arr_2)
-    coincidence_arr = []
-
-    if n_cand_1<=n_cand_2:
-        for ii in range(n_cand_1):
-            delta_t_sec = np.abs(mjd_arr_1[ii]-mjd_arr_2)*86400
-            delta_dm = np.abs(dm_arr_1[ii]-dm_arr_2)
-
-            ind_coincidence = np.where((delta_t_sec<t_thresh_sec) & (delta_dm<25.0))[0]
-
-            if len(ind_coincidence):
-                coincidence_arr.append((delta_t_sec[ind_coincidence], 
-                                        delta_dm[ind_coincidence],
-                                        ind_coincidence))
-
-            min_ind = np.argmin(np.abs(mjd_arr_1[ii]-mjd_arr_2))
-            min_t = np.abs(mjd_arr_1[ii] - mjd_arr_2[min_ind])*86400
-
-            if min_t < t_thresh_sec:
-                coincidence_arr.append((ii, min_ind, min_t))
-
-        if len(coincidence_arr)==0:
-            return pd.DataFrame(np.array(coincidence_arr))
-
-        return pd.DataFrame(np.array(coincidence_arr), columns=('Index1','Index2','t_diff_seconds'))
-
-    if n_cand_2<n_cand_1:
-        for ii in range(n_cand_2):
-            min_ind = np.argmin(np.abs(mjd_arr_2[ii]-mjd_arr_1))
-            min_t = np.abs(mjd_arr_2[ii] - mjd_arr_1[min_ind])*86400
-
-            if min_t < t_thresh_sec:
-                coincidence_arr.append((min_ind, ii, min_t))
-    
-            if len(coincidence_arr)==0:
-                return pd.DataFrame(np.array(coincidence_arr))
-
-        return pd.DataFrame(np.array(coincidence_arr), columns=('Index1','Index2','t_diff_seconds'))
 
 def get_coincidence_3stations(fncand1, fncand2, fncand3, 
                               t_thresh_sec=0.25, 
