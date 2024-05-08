@@ -16,6 +16,9 @@ your = "^0.6.7"
 jax = "^0.4.14"
 jaxlib = "^0.4.14"
 paramiko = "^3.4.0"
+inotify = "^0.2.10"
+slack-sdk = "^3.27.1"
+xarray = "^2024.3.0"
 
 [build-system]
 requires = ["poetry-core"]
