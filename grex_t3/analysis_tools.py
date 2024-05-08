@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from astropy.time import Time
 from astropy import units as u
+import scipy
 
 sgr_1935_ra = 293.731999*u.deg
 dm_sgr1935 = 332.
@@ -125,7 +126,7 @@ class SNR_Tools:
 
         return 1.4826*mad, med
 
-    def calc_snr_presto(self, data):
+    def calc_snr_presto(self, data, verbose=None):
         """ Calculate S/N of 1D input array (data)
         after excluding 0.05 at tails
         """
@@ -135,8 +136,10 @@ class SNR_Tools:
         stds = 1.148*np.sqrt((std_chunk[ntime_r//40:-ntime_r//40]**2.0).sum() /
                               (0.95*ntime_r))
         snr_ = std_chunk[-1] / stds 
-
-        return snr_
+        if verbose==None:
+            return snr_
+        else:
+            return snr_, stds
 
     def calc_snr_amber(self, data, thresh=3.):
         sig = np.std(data)
