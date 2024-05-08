@@ -1,0 +1,14 @@
+[Unit]
+Description=Plots T3 pulse candidates
+After=network.target
+
+[Service]
+ExecStart=/home/user/.local/bin/poetry run python3 /home/user/zghuai/GReX-T3/grex_t3/T3_monitor.py
+Environment="POETRY_PROJECT_DIR"=/home/user/GReX-T3/grex_t3/
+WorkingDirectory=/home/user/zghuai/GReX-T3/
+Restart=always
+User=user
+Group=user
+
+[Install]
+WantedBy=multi-user.target
