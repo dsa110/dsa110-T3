@@ -6,7 +6,7 @@ import pandas as pd
 from your.candidate import Candidate
 from your.formats.filwriter import make_sigproc_object
 
-def write_sigproc(fnfilout, stokesi_obj):
+def write_sigproc(fnfilout, stokesi_obj, t_start=59246):
     """ Write a StokesI object to a .fil file 
     using the YOUR library.
 
@@ -16,6 +16,8 @@ def write_sigproc(fnfilout, stokesi_obj):
         The file name of the .fil file to write to.
     stokesi_obj : xarray.DataArray
         The Stokes I data object to write.
+    t_start: float
+        Start time in MJD of the output .fil file.
 
     Returns
     -------
@@ -32,13 +34,13 @@ def write_sigproc(fnfilout, stokesi_obj):
                                     foff=foff,  # MHz
                                     fch1=fch1,  # MHz
                                     tsamp=tsamp,  # seconds
-                                    tstart=59246,  # MJD
+                                    tstart=t_start,  # MJD
                                     src_raj=112233.44,  # HHMMSS.SS
                                     src_dej=112233.44,  # DDMMSS.SS
                                     machine_id=0,
                                     nbeams=1,
                                     ibeam=0,
-                                    nbits=8,
+                                    nbits=16,
                                     nifs=1,
                                     barycentric=0,
                                     pulsarcentric=0,
@@ -51,7 +53,7 @@ def write_sigproc(fnfilout, stokesi_obj):
     sigproc_object.append_spectra(stokesi_obj.data, fnfilout)
 
 def read_voltage_data(file_name, timedownsample=None,
-                      freqdownsample=None):
+                      freqdownsample=None, verbose=None, nbit='uint32'):
     """ Read in the voltage data from a .nc file 
     and return it as StokesI.
 
@@ -74,8 +76,8 @@ def read_voltage_data(file_name, timedownsample=None,
     # Create complex numbers from Re/Im
     voltages = ds["voltages"].sel(reim="real") + ds["voltages"].sel(reim="imaginary") * 1j
     # Make Stokes I by converting to XX/YY and then creating XX**2 + YY**2
-    stokesi = np.square(np.abs(voltages)).astype('int32')
-    stokesi = stokesi.sum(dim='pol').astype('int32')  # Summing and then converting type if necessary
+    stokesi = np.square(np.abs(voltages)).astype(nbit)
+    stokesi = stokesi.sum(dim='pol').astype(nbit)  # Summing and then converting type if necessary
 
     # Compute in parallel (if using Dask)
     stokesi = stokesi.compute()
@@ -85,7 +87,10 @@ def read_voltage_data(file_name, timedownsample=None,
     if freqdownsample is not None:
         stokesi = stokesi.coarsen(freq=int(freqdownsample), boundary='trim').mean()
 
-    return stokesi
+    if verbose==None:
+        return stokesi
+    else:
+        return stokesi, ds.time.min().values, (ds.time.values.max() - ds.time.values.min())*86400
 
 def read_proc_fil(fnfil, dm=0, tcand=2.0, 
                   width=1, device=0, tstart=0,
