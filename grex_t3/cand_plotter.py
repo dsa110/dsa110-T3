@@ -2,7 +2,6 @@
 ### time gap between cand MJD and voltage starting time still exists
 ### usage: poetry run python cand_plotter.py <full .json name>
 
-
 import numpy as np
 import pandas as pd
 import sys

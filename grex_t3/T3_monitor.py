@@ -169,12 +169,12 @@ def main(path):
                     # print(command)
                     # os.system(command)
 
-                    # try:
-                    #     upload_to_slack(pdffile) # upload to Slack #candidates channel
-                    #     logging.info(f"Successfully posted to Slack #candidates!")
-                    # except Exception as e:
-                    #     logging.error("Error uploading candidate plot to Slack: %s", str(e))
-                    # logging.info("DONE")
+                    try:
+                         upload_to_slack(pdffile) # upload to Slack #candidates channel
+                         logging.info(f"Successfully posted to Slack #candidates!")
+                    except Exception as e:
+                         logging.error("Error uploading candidate plot to Slack: %s", str(e))
+                    logging.info("DONE")
 
                     # test; construct the output pdf filename here
                     # send_to_slack("Hello World! filename={}".format(pdffile))
