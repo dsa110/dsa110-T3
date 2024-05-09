@@ -90,7 +90,18 @@ if __name__=='__main__':
 
     # INFERENCE
     t1 = time.time()
-    data = np.load(data_path)
+
+    if data_path.endswith('.npy'):
+        data = np.load(data_path)
+    elif data_path.endswith('.nc'):
+        data = candproc_tools.read_voltage_data(data_path, timedownsample=int(2**5),
+                                                freqdownsample=None, verbose=None,
+                                                nbit='uint32')
+        data = data.data
+    else:
+        print('Data path must be .npy or .nc')
+        exit()
+
     # data = data[None, None, :]
     t2 = time.time()
     mean = np.median(np.mean(data, axis=(1, 2, 3)))

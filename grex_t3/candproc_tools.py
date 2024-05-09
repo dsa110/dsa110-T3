@@ -6,7 +6,7 @@ import pandas as pd
 from your.candidate import Candidate
 from your.formats.filwriter import make_sigproc_object
 
-def write_sigproc(fnfilout, stokesi_obj, t_start=59246):
+def write_sigproc(fnfilout, stokesi_obj):
     """ Write a StokesI object to a .fil file 
     using the YOUR library.
 
@@ -16,8 +16,6 @@ def write_sigproc(fnfilout, stokesi_obj, t_start=59246):
         The file name of the .fil file to write to.
     stokesi_obj : xarray.DataArray
         The Stokes I data object to write.
-    t_start: float
-        Start time in MJD of the output .fil file.
 
     Returns
     -------
@@ -27,6 +25,7 @@ def write_sigproc(fnfilout, stokesi_obj, t_start=59246):
     foff = np.diff(stokesi_obj.freq)[0]
     fch1 = stokesi_obj.freq.values[0]
     tsamp = np.diff(stokesi_obj.time)[0] * 86400.
+    tstart=stokesi_obj.time.values[0]
     sigproc_object = make_sigproc_object(
                                     rawdatafile=fnfilout,
                                     source_name="bar",
@@ -34,7 +33,7 @@ def write_sigproc(fnfilout, stokesi_obj, t_start=59246):
                                     foff=foff,  # MHz
                                     fch1=fch1,  # MHz
                                     tsamp=tsamp,  # seconds
-                                    tstart=t_start,  # MJD
+                                    tstart=tstart,  # MJD
                                     src_raj=112233.44,  # HHMMSS.SS
                                     src_dej=112233.44,  # DDMMSS.SS
                                     machine_id=0,
