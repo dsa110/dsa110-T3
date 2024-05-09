@@ -5,6 +5,7 @@ from grex_t3.mlmodel.helpers import makedir, load_data
 import torch
 
 from grex_t3.mlmodel.RFIMLsettings import data_path, out_path, model_path, batch_size
+from grex_t3 import candproc_tools
 
 import numpy as np
 
@@ -77,10 +78,13 @@ def mask_data(data, prob_thresh=1e-7):
     return mask_prob, data
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser() 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('data_path', help='Input file path')    
     parser.add_argument('-d', type=str, default='0', help='(Device) The GPU ID to run training on')
     args = parser.parse_args()
 
+    data_path = args.data_path
+    
     os.environ['CUDA_VISIBLE_DEVICES'] = args.d
     
     makedir(out_path)
