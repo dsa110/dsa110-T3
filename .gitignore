@@ -6,4 +6,6 @@ RELEASE-VERSION
 *~
 *.pyc
 *RFImodel_UNet_May2024.pth
-*.hdf5mlmodels/RFImodel_UNet_May2024.pth
+*.hdf5
+mlmodels/RFImodel_UNet_May2024.pth
+mlmodel/RFImodel_UNet_May2024.pth
