@@ -1,10 +1,10 @@
 import os
 
-from mlmodel.unet import UNet
-from mlmodel.helpers import makedir, load_data
+from grex_t3.mlmodel.unet import UNet
+from grex_t3.mlmodel.helpers import makedir, load_data
 import torch
 
-from mlmodel.RFIMLsettings import data_path, out_path, model_path, batch_size
+from grex_t3.mlmodel.RFIMLsettings import data_path, out_path, model_path, batch_size
 
 import numpy as np
 
@@ -27,7 +27,25 @@ def inference(model, data_loader):
             preds.append(outputs)
     return preds
 
-def main(data, prob_thresh=1e-7):
+def mask_data(data, prob_thresh=1e-7):
+    """ Take time/frequency data, feed to the 
+    trained UNet, and output both the mask and 
+    masked data.
+
+    Paramaters:
+    ----------
+    data : ndarray
+        Expecting either (nfreq, ntime), 
+        (nchunk, 1, nfreq, ntime//nchunk), 
+        or (nchunk, nfreq, ntime//nchunk)
+
+    Returns:
+    -------
+    mask_array : ndarray
+        Array of probabilities. High values are more likely RFI.
+    clean_data : ndarray
+        Array of cleaned data, where RFI samples are set to NaN
+    """
     segmentor = UNet()
     segmentor.load_state_dict(torch.load(model_path))
     # INFERENCE
