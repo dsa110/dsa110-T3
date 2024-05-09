@@ -5,3 +5,5 @@ RELEASE-VERSION
 .vscode/settings.json
 *~
 *.pyc
+*RFImodel_UNet_May2024.pth
+*.hdf5mlmodels/RFImodel_UNet_May2024.pth
