@@ -168,10 +168,20 @@ def plotfour(dataft, datats, datadmt,
             \nHeimdall ibox : %d\nibeam : %d' % (heimsnr,dm,ibox,ibeam), 
             fontsize=8, verticalalignment='center')
     
-    if fnT2clust is not None:
-        t2df = get_T2object(fnT2clust)  # wrap with retry
+    t2df = None
+    if fnT2clust is None:
+        try:
+            # first try to get one at event MJD
+            fnT2clust = f'{T2dir}/{int(imjd)}.csv'
+            t2df = get_T2object(fnT2clust)
+            print(f'Using specific T2 info in {fnT2clust}')
+        except:
+            # fall back to recent accumulation
+            fnT2clust = f'{T2dir}/cluster_output.csv'
+            print(f'Using recent T2 info in {fnT2clust}')
+            t2df = get_T2object(fnT2clust)
     else:
-        t2df = None
+        t2df = get_T2object(fnT2clust)
 
     parent_axes = axs[1][1]
     if beam_time_arr is None and t2df is not None:
@@ -659,7 +669,7 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
 
 def filplot_entry(trigger_dict, toslack=True, classify=True,
                   rficlean=False, ndm=32, nfreq_plot=32, save_data=False,
-                  fllisting=None):
+                  fllisting=None, fnT2clust=None):
     """ Given datestring and trigger dictionary, run filterbank plotting, classifying, slack posting.
     Returns figure filename and classification probability. 
     
@@ -699,7 +709,6 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     injected = trigger_dict['injected']
     ibeam_prob = trigger_dict['ibeam_prob']
     
-    fnT2clust = f'{T2dir}/cluster_output.csv'
     fname = None
     if fllisting is None:
         flist = glob.glob(f"{os.path.join(T1dir, trigname)}/*.fil")
@@ -804,7 +813,6 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
     snr = trigger_dict['snr']
     injected = trigger_dict['injected']
     
-    fnT2clust = f'{T2dir}/cluster_output.csv'
     fname = None
     
     if fllisting is None:
@@ -844,7 +852,7 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
                              ibeam=ibeam, rficlean=rficlean, 
                              nfreq_plot=nfreq_plot, classify=classify, showplot=showplot, 
                              multibeam=None, heim_raw_tres=1, save_data=save_data,
-                             candname=trigname, fnT2clust=fnT2clust, imjd=timehr,
+                             candname=trigname, imjd=timehr,
                              injected=injected, fast_classify=True)
     print("Probability of fast classification: %0.2f" % prob)
     return prob
