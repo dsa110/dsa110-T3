@@ -232,7 +232,7 @@ def plotfour(dataft, datats, datadmt,
             axs[2][1].scatter(0, ibeam, s=100, marker='s',
                         facecolor='none', edgecolor='black')
             axs[2][1].set_xlim(-10,10.)
-            axs[2][1].set_ylim(0,256)
+            axs[2][1].set_ylim(0,512)
             axs[2][1].set_xlabel('Time (s)')
             axs[2][1].set_ylabel('ibeam')
 
@@ -479,7 +479,7 @@ def generate_beam_time_arr(fl, ibeam=0, pre_rebin=1,
     # read in 4 seconds of data
     nsamp = int(4.0/header['tsamp'])
     nsamp_final = nsamp // (heim_raw_tres*ibox)
-    nfreq_final = 1024
+    nfreq_final = 512
 #    beam_time_arr = np.zeros([nbeam, nsamp_final])
     beam_time_arr = np.zeros([nbeam, nfreq_final, nsamp_final])    
     multibeam_dm0ts = 0
@@ -571,7 +571,6 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
 
     if type(multibeam)==list:
         data_beam_freq_time = []
-        nbeam=256
         beam_time_arr_results = generate_beam_time_arr(multibeam, ibox=ibox, pre_rebin=1, dm=dm, heim_raw_tres=heim_raw_tres)
         data_beam_freq_time, _, beamno_arr = beam_time_arr_results
         beam_time_arr = data_beam_freq_time.mean(1)
@@ -625,7 +624,7 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
 
 
 def filplot_entry(trigger_dict, toslack=True, classify=True,
-                  rficlean=False, ndm=32, nfreq_plot=32, save_data=True,
+                  rficlean=False, ndm=32, nfreq_plot=32, save_data=False,
                   fllisting=None):
     """ Given datestring and trigger dictionary, run filterbank plotting, classifying, slack posting.
     Returns figure filename and classification probability. 
@@ -660,7 +659,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     trigname = trigger_dict['trigname']
     dm = trigger_dict['dm']
     ibox = trigger_dict['ibox']
-    ibeam = trigger_dict['ibeam'] + 1
+    ibeam = trigger_dict['ibeam']
     timehr = trigger_dict['mjds']
     snr = trigger_dict['snr']
     injected = trigger_dict['injected']
@@ -700,6 +699,10 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     figname = figdirout+trigname+'.png'
 
     assert fname is not None, "Must set fname"
+
+    # set flist to None for now VR
+    flist=None
+    
     not_real, prob = filplot(fname, dm, ibox, figname=figname,
                              ndm=ndm, suptitle=suptitle, heimsnr=snr,
                              ibeam=ibeam, rficlean=rficlean, 
@@ -713,10 +716,11 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
         if real:
             print(f"Sending {figname} to slack")
             try:
-                if ibeam_prob > 0.95 and ibox < 16 and snr > 13 and not (dm > 624 and dm < 628) and not injected:
-                    message = f"{os.path.basename(figname)} (VOEvent sent!)"
-                else:
-                    message = os.path.basename(figname)
+                # VR hack
+                #if ibeam_prob > 0.95 and ibox < 16 and snr > 13 and not (dm > 624 and dm < 628) and not injected:
+                #message = f"{os.path.basename(figname)} (VOEvent sent!)"
+                #else:
+                message = os.path.basename(figname)
                 slack_client.files_upload(channels='candidates', file=figname, initial_comment=message)
             except slack.errors.SlackApiError as exc:
                 print(f'SlackApiError!: {str(exc)}')
