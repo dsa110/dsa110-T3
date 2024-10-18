@@ -175,24 +175,42 @@ def plotfour(dataft, datats, datadmt,
 
     parent_axes = axs[1][1]
     if beam_time_arr is None and t2df is not None:
+        i_cand = np.where(imjd == t2df.mjds)[0]
+        if len(i_cand) > 1:
+            print(f'multiple candidates at imjd={imjd}. Using first...')
+            i_cand = i_cand[0]
+        elif len(i_cand) == 1:
+            i_cand = i_cand[0]
+        else:
+            print(f'could not find T2 event at imjd={imjd}')
+
+        # accumulate outer product over T2 events near candidate
+        i_nearby = np.where(np.abs(86400*(imjd-t2df.mjds[:]))<3600.0)[0]
+
         # create outer product image
-        snrs = np.zeros((len(t2df), 512))
-        for i in range(len(t2df)):
-            snrs[i, t2df[[f'beams{j}' for j in range(nsnr)]].iloc[i].values] = t2df[[f'snrs{j}' for j in range(nsnr)]].iloc[i].values
+        snrs = np.zeros((len(i_nearby), 512))
+        for i in range(len(snrs)):
+            snrs[i, t2df[[f'beams{j}' for j in range(nsnr)]].iloc[i_nearby[i]].values] = t2df[[f'snrs{j}' for j in range(nsnr)]].iloc[i_nearby[i]].values
 
+        # accumulate outer products. TODO: limit to near the event
         im = np.zeros((256, 256))
-        for i in range(len(t2df)):
-            im += np.sqrt(np.outer(snrs[i, :256], snrs[i, 256:]))
-        xticks, xlabels = zip(*[(t, l) for (t,l) in zip(ticks, labels) if t < 256])
-        yticks, ylabels = zip(*[(t-256, l) for (t,l) in zip(ticks, labels) if t >= 256])
-        imshow = ax.imshow(im.transpose(), cmap='magma', origin='lower', interpolation='nearest')
-        ax.set_xlabel('E-W beam')
-        ax.set_ylabel('N-S beam')
-        ax.tick_params(direction='out', length=6, width=2, colors='r')
-        ax.set_xticks(xticks, np.round(xlabels, 1))
-        ax.set_yticks(yticks, np.round(ylabels, 1))
-        fig.colorbar(imshow)
+        for i in range(len(snrs)):
+            im += np.sqrt(np.multiply.outer(snrs[i, :256], snrs[i, 256:]))
 
+        # custom ticks to show beams/snrs of candidate
+        ticks = t2df[[f'beams{j}' for j in range(nsnr)]].iloc[i_cand].values
+        labels = t2df[[f'snrs{j}' for j in range(nsnr)]].iloc[i_cand].values
+        xticks, xlabels = zip(*[(t, l) for (t,l) in zip(ticks, labels) if t < 256 and l > 0])
+        yticks, ylabels = zip(*[(t-256, l) for (t,l) in zip(ticks, labels) if t >= 256 and l > 0])
+
+        # plot
+        imshow = parent_axes.imshow(im.transpose(), cmap='magma', origin='lower', interpolation='nearest')
+        parent_axes.set_xlabel('E-W beam')
+        parent_axes.set_ylabel('N-S beam')
+        parent_axes.tick_params(direction='out', length=6, width=2, colors='k')
+        parent_axes.set_xticks(xticks, np.round(xlabels, 1))
+        parent_axes.set_yticks(yticks, np.round(ylabels, 1))
+        fig.colorbar(imshow, label="2-arm SNR (recently)", ax=axs[1][1])
     else:
         parent_axes.imshow(beam_time_arr[::-1], aspect='auto', extent=[tmin, tmax, 0, beam_time_arr.shape[0]], 
                   interpolation='nearest')
@@ -242,7 +260,7 @@ def plotfour(dataft, datats, datadmt,
                                          t2df.ibeam[ind],
                                          c=t2df.dm[ind],
                                          s=2*t2df.snr[ind],
-                                         cmap='viridis'
+                                         cmap='viridis',
                                          vmin=0)#,vmax=1200)
             fig.colorbar(mappable, label=r'DM (pc cm$^{-3}$)', ax=axs[2][1])
             axs[2][1].scatter(0, ibeam, s=100, marker='s',
@@ -781,7 +799,7 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
     trigname = trigger_dict['trigname']
     dm = trigger_dict['dm']
     ibox = trigger_dict['ibox']
-    ibeam = trigger_dict['ibeam'] + 1
+    ibeam = trigger_dict['ibeam']
     timehr = trigger_dict['mjds']
     snr = trigger_dict['snr']
     injected = trigger_dict['injected']
