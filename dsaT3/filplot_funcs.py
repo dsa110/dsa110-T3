@@ -86,8 +86,8 @@ def read_fil_data_dsa(fn, start=0, stop=1):
 
 
 def plotfour(dataft, datats, datadmt, 
-             beam_time_arr=None, figname=None, dm=0,
-             dms=[0,1], 
+             beam_time_arr=None, nsnr=5,
+             figname=None, dm=0, dms=[0,1], 
              datadm0=None, suptitle='', heimsnr=-1,
              ibox=1, ibeam=-1, prob=-1,
              showplot=True,multibeam_dm0ts=None,
@@ -168,13 +168,31 @@ def plotfour(dataft, datats, datadmt,
             \nHeimdall ibox : %d\nibeam : %d' % (heimsnr,dm,ibox,ibeam), 
             fontsize=8, verticalalignment='center')
     
-#    parent_axes=fig.add_subplot(324)
+    if fnT2clust is not None:
+        t2df = get_T2object(fnT2clust)  # wrap with retry
+    else:
+        t2df = None
+
     parent_axes = axs[1][1]
-    if beam_time_arr is None:
-        plt.xticks([])
-        plt.yticks([])
-        plt.text(0.20, 0.55, 'Multibeam info\n not available',
-                fontweight='bold')
+    if beam_time_arr is None and t2df is not None:
+        # create outer product image
+        snrs = np.zeros((len(t2df), 512))
+        for i in range(len(t2df)):
+            snrs[i, t2df[[f'beams{j}' for j in range(nsnr)]].iloc[i].values] = t2df[[f'snrs{j}' for j in range(nsnr)]].iloc[i].values
+
+        im = np.zeros((256, 256))
+        for i in range(len(t2df)):
+            im += np.sqrt(np.outer(snrs[i, :256], snrs[i, 256:]))
+        xticks, xlabels = zip(*[(t, l) for (t,l) in zip(ticks, labels) if t < 256])
+        yticks, ylabels = zip(*[(t-256, l) for (t,l) in zip(ticks, labels) if t >= 256])
+        imshow = ax.imshow(im.transpose(), cmap='magma', origin='lower', interpolation='nearest')
+        ax.set_xlabel('E-W beam')
+        ax.set_ylabel('N-S beam')
+        ax.tick_params(direction='out', length=6, width=2, colors='r')
+        ax.set_xticks(xticks, np.round(xlabels, 1))
+        ax.set_yticks(yticks, np.round(ylabels, 1))
+        fig.colorbar(imshow)
+
     else:
         parent_axes.imshow(beam_time_arr[::-1], aspect='auto', extent=[tmin, tmax, 0, beam_time_arr.shape[0]], 
                   interpolation='nearest')
@@ -217,17 +235,15 @@ def plotfour(dataft, datats, datadmt,
             axs[2][0].legend(['DM=0 Timestream'], loc=2, fontsize=10)
         axs[2][0].set_xlabel('Time (ms)')
                 
-        if fnT2clust is not None:
-            T2object = get_T2object(fnT2clust)  # wrap with retry
-
-            ind = np.where(np.abs(86400*(imjd-T2object.mjds[:]))<30.0)[0]
-            ttsec = (T2object.mjds.values-imjd)*86400
+        if t2df is not None:
+            ind = np.where(np.abs(86400*(imjd-t2df.mjds[:]))<30.0)[0]
+            ttsec = (t2df.mjds.values-imjd)*86400
             mappable = axs[2][1].scatter(ttsec[ind],
-                                         T2object.ibeam[ind],
-                                         c=T2object.dm[ind],
-                                         s=2*T2object.snr[ind],
-                                         cmap='RdBu_r',
-                                         vmin=0,vmax=1200)
+                                         t2df.ibeam[ind],
+                                         c=t2df.dm[ind],
+                                         s=2*t2df.snr[ind],
+                                         cmap='viridis'
+                                         vmin=0)#,vmax=1200)
             fig.colorbar(mappable, label=r'DM (pc cm$^{-3}$)', ax=axs[2][1])
             axs[2][1].scatter(0, ibeam, s=100, marker='s',
                         facecolor='none', edgecolor='black')
@@ -479,7 +495,7 @@ def generate_beam_time_arr(fl, ibeam=0, pre_rebin=1,
     # read in 4 seconds of data
     nsamp = int(4.0/header['tsamp'])
     nsamp_final = nsamp // (heim_raw_tres*ibox)
-    nfreq_final = 512
+    nfreq_final = 1024
 #    beam_time_arr = np.zeros([nbeam, nsamp_final])
     beam_time_arr = np.zeros([nbeam, nfreq_final, nsamp_final])    
     multibeam_dm0ts = 0
