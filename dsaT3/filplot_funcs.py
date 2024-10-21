@@ -185,14 +185,14 @@ def plotfour(dataft, datats, datadmt,
 
     parent_axes = axs[1][1]
     if beam_time_arr is None and t2df is not None:
-        i_cand = np.where(imjd == t2df.mjds)[0]
+        i_cand = np.where(np.round(imjd, 8) == np.round(t2df.mjds, 8))[0]
         if len(i_cand) > 1:
-            print(f'multiple candidates at imjd={imjd}. Using first...')
+            print(f'multiple candidates at imjd={np.round(imjd, 8)}. Using first...')
             i_cand = i_cand[0]
         elif len(i_cand) == 1:
             i_cand = i_cand[0]
         else:
-            print(f'could not find T2 event at imjd={imjd}')
+            print(f'could not find T2 event at imjd={np.round(imjd, 8)}')
 
         # accumulate outer product over T2 events near candidate
         i_nearby = np.where(np.abs(86400*(imjd-t2df.mjds[:]))<3600.0)[0]
