@@ -11,6 +11,7 @@ mpl.rcdefaults()
 mpl.use('Agg') # hack
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import scipy.signal
+from scipy.ndimage.filters import gaussian_filter
 from scipy import stats
 import pandas
 from pandas.errors import EmptyDataError
@@ -86,7 +87,7 @@ def read_fil_data_dsa(fn, start=0, stop=1):
 
 
 def plotfour(dataft, datats, datadmt, 
-             beam_time_arr=None, nsnr=5,
+             beam_time_arr=None, nsnr=10,
              figname=None, dm=0, dms=[0,1], 
              datadm0=None, suptitle='', heimsnr=-1,
              ibox=1, ibeam=-1, prob=-1,
@@ -200,16 +201,17 @@ def plotfour(dataft, datats, datadmt,
         # create outer product image
         snrs = np.zeros((len(i_nearby), 512))
         for i in range(len(snrs)):
-            snrs[i, t2df[[f'beams{j}' for j in range(nsnr)]].iloc[i_nearby[i]].values] = t2df[[f'snrs{j}' for j in range(nsnr)]].iloc[i_nearby[i]].values
+            snrs[i, t2df[[f'beams{j}' for j in range(nsnr) if f'beams{j}' in t2df.columns]].iloc[i_nearby[i]].values] = t2df[[f'snrs{j}' for j in range(nsnr) if f'snrs{j}' in t2df.columns]].iloc[i_nearby[i]].values
 
         # accumulate outer products. TODO: limit to near the event
         im = np.zeros((256, 256))
         for i in range(len(snrs)):
             im += np.sqrt(np.multiply.outer(snrs[i, :256], snrs[i, 256:]))
 
+        im = gaussian_filter(im, 4)
         # custom ticks to show beams/snrs of candidate
-        ticks = t2df[[f'beams{j}' for j in range(nsnr)]].iloc[i_cand].values
-        labels = t2df[[f'snrs{j}' for j in range(nsnr)]].iloc[i_cand].values
+        ticks = t2df[[f'beams{j}' for j in range(nsnr) if f'beams{j}' in t2df.columns]].iloc[i_cand].values
+        labels = t2df[[f'snrs{j}' for j in range(nsnr) if f'snrs{j}' in t2df.columns]].iloc[i_cand].values
         xticks, xlabels = zip(*[(t, l) for (t,l) in zip(ticks, labels) if t < 256 and l > 0])
         yticks, ylabels = zip(*[(t-256, l) for (t,l) in zip(ticks, labels) if t >= 256 and l > 0])
 
