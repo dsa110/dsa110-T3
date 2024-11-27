@@ -196,7 +196,7 @@ def plotfour(dataft, datats, datadmt,
             print(f'could not find T2 event at imjd={np.round(imjd, 8)}')
 
         # accumulate outer product over T2 events near candidate
-        i_nearby = np.where(np.abs(86400*(imjd-t2df.mjds[:]))<3600.0)[0]
+        i_nearby = np.where(np.abs(86400*(imjd-t2df.mjds[:]))<60.0)[0]
 
         # create outer product image
         snrs = np.zeros((len(i_nearby), 512))
