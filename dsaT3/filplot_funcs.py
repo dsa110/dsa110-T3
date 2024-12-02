@@ -126,7 +126,7 @@ def plotfour(dataft, datats, datadmt,
     if xminplot<0:
         xmaxplot=xminplot+500+300*ibox/16        
         xminplot=0
-#    xminplot,xmaxplot = 0, 1000.
+
     dm_min, dm_max = dms[0], dms[1]
     tmin, tmax = 0., 1e3*dataft.header['tsamp']*ntime
     freqmax = dataft.header['fch1']
@@ -200,8 +200,11 @@ def plotfour(dataft, datats, datadmt,
 
         # create outer product image
         snrs = np.zeros((len(i_nearby), 512))
+        beamcols = [f'beams{j}' for j in range(nsnr) if f'beams{j}' in t2df.columns]
+        snrcols = [f'snrs{j}' for j in range(nsnr) if f'snrs{j}' in t2df.columns]
         for i in range(len(snrs)):
-            snrs[i, t2df[[f'beams{j}' for j in range(nsnr) if f'beams{j}' in t2df.columns]].iloc[i_nearby[i]].values] = t2df[[f'snrs{j}' for j in range(nsnr) if f'snrs{j}' in t2df.columns]].iloc[i_nearby[i]].values
+            print(f'snr {i}: {snrs[i]}')
+            snrs[i, t2df[beamcols].iloc[i_nearby[i]].values] = t2df[snrcols].iloc[i_nearby[i]].values
 
         # accumulate outer products. TODO: limit to near the event
         im = np.zeros((256, 256))
@@ -210,8 +213,8 @@ def plotfour(dataft, datats, datadmt,
 
         im = gaussian_filter(im, 4)
         # custom ticks to show beams/snrs of candidate
-        ticks = t2df[[f'beams{j}' for j in range(nsnr) if f'beams{j}' in t2df.columns]].iloc[i_cand].values
-        labels = t2df[[f'snrs{j}' for j in range(nsnr) if f'snrs{j}' in t2df.columns]].iloc[i_cand].values
+        ticks = t2df[beamcols].iloc[i_cand].values
+        labels = t2df[snrcols].iloc[i_cand].values
         xticks, xlabels = zip(*[(t, l) for (t,l) in zip(ticks, labels) if t < 256 and l > 0])
         yticks, ylabels = zip(*[(t-256, l) for (t,l) in zip(ticks, labels) if t >= 256 and l > 0])
 

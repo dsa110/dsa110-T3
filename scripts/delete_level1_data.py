@@ -12,6 +12,7 @@ subdirs_to_clear = [
     ("T1", "23*"),
     ("T2/cluster_output", "*.cand"),
     ("T2/cluster_output", "*.json"),
+    ("T2/cluster_output", "*.csv"),
     ("T3", "*.png"),
     ("T3", "*.json"),
 ]
