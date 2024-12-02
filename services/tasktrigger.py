@@ -23,7 +23,11 @@ while True:
     print(f"Found {len(trig_jsons)} trigger jsons to process. Processing candnames {candnames}.")
 
     for fl in trig_jsons:
-        d = event.create_event(fl)
+        try:
+            d = event.create_event(fl)
+        except json.JSONDecodeError:
+            print(f'{fl} could not be parsed into an event. skipping...')
+
         if d.trigname not in candnames:
             fut = T3_manager.submit_cand(fl)
             tasks.append(fut)

@@ -194,37 +194,39 @@ def plotfour(dataft, datats, datadmt,
             i_cand = i_cand[0]
         else:
             print(f'could not find T2 event at imjd={np.round(imjd, 8)}')
+            i_cand = -1
 
-        # accumulate outer product over T2 events near candidate
-        i_nearby = np.where(np.abs(86400*(imjd-t2df.mjds[:]))<60.0)[0]
+        if i_cand >= 0:
+            # accumulate outer product over T2 events near candidate
+            i_nearby = np.where(np.abs(86400*(imjd-t2df.mjds[:]))<60.0)[0]
 
-        # create outer product image
-        snrs = np.zeros((len(i_nearby), 512))
-        beamcols = [f'beams{j}' for j in range(nsnr) if f'beams{j}' in t2df.columns]
-        snrcols = [f'snrs{j}' for j in range(nsnr) if f'snrs{j}' in t2df.columns]
-        for i in range(len(snrs)):
-            snrs[i, np.int_(t2df[beamcols].iloc[i_nearby[i]].values)] = t2df[snrcols].iloc[i_nearby[i]].values
+            # create outer product image
+            snrs = np.zeros((len(i_nearby), 512))
+            beamcols = [f'beams{j}' for j in range(nsnr) if f'beams{j}' in t2df.columns]
+            snrcols = [f'snrs{j}' for j in range(nsnr) if f'snrs{j}' in t2df.columns]
+            for i in range(len(snrs)):
+                snrs[i, np.int_(t2df[beamcols].iloc[i_nearby[i]].values)] = t2df[snrcols].iloc[i_nearby[i]].values
 
-        # accumulate outer products. TODO: limit to near the event
-        im = np.zeros((256, 256))
-        for i in range(len(snrs)):
-            im += np.sqrt(np.multiply.outer(snrs[i, :256], snrs[i, 256:]))
+            # accumulate outer products. TODO: limit to near the event
+            im = np.zeros((256, 256))
+            for i in range(len(snrs)):
+                im += np.sqrt(np.multiply.outer(snrs[i, :256], snrs[i, 256:]))
 
-        im = gaussian_filter(im, 4)
-        # custom ticks to show beams/snrs of candidate
-        ticks = t2df[beamcols].iloc[i_cand].values
-        labels = t2df[snrcols].iloc[i_cand].values
-        xticks, xlabels = zip(*[(t, l) for (t,l) in zip(ticks, labels) if t < 256 and l > 0])
-        yticks, ylabels = zip(*[(t-256, l) for (t,l) in zip(ticks, labels) if t >= 256 and l > 0])
+            im = gaussian_filter(im, 4)
+            # custom ticks to show beams/snrs of candidate
+            ticks = t2df[beamcols].iloc[i_cand].values
+            labels = t2df[snrcols].iloc[i_cand].values
+            xticks, xlabels = zip(*[(t, l) for (t,l) in zip(ticks, labels) if t < 256 and l > 0])
+            yticks, ylabels = zip(*[(t-256, l) for (t,l) in zip(ticks, labels) if t >= 256 and l > 0])
 
-        # plot
-        imshow = parent_axes.imshow(im.transpose(), cmap='magma', origin='lower', interpolation='nearest')
-        parent_axes.set_xlabel('E-W beam')
-        parent_axes.set_ylabel('N-S beam')
-        parent_axes.tick_params(direction='out', length=6, width=2, colors='k')
-        parent_axes.set_xticks(xticks, np.round(xlabels, 1))
-        parent_axes.set_yticks(yticks, np.round(ylabels, 1))
-        fig.colorbar(imshow, label="2-arm SNR (recently)", ax=axs[1][1])
+            # plot
+            imshow = parent_axes.imshow(im.transpose(), cmap='magma', origin='lower', interpolation='nearest')
+            parent_axes.set_xlabel('E-W beam')
+            parent_axes.set_ylabel('N-S beam')
+            parent_axes.tick_params(direction='out', length=6, width=2, colors='k')
+            parent_axes.set_xticks(xticks, np.round(xlabels, 1))
+            parent_axes.set_yticks(yticks, np.round(ylabels, 1))
+            fig.colorbar(imshow, label="2-arm SNR (recently)", ax=axs[1][1])
     else:
         parent_axes.imshow(beam_time_arr[::-1], aspect='auto', extent=[tmin, tmax, 0, beam_time_arr.shape[0]], 
                   interpolation='nearest')
