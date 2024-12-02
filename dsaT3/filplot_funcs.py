@@ -203,8 +203,7 @@ def plotfour(dataft, datats, datadmt,
         beamcols = [f'beams{j}' for j in range(nsnr) if f'beams{j}' in t2df.columns]
         snrcols = [f'snrs{j}' for j in range(nsnr) if f'snrs{j}' in t2df.columns]
         for i in range(len(snrs)):
-            print(f'snr {i}: {snrs[i]}')
-            snrs[i, t2df[beamcols].iloc[i_nearby[i]].values] = t2df[snrcols].iloc[i_nearby[i]].values
+            snrs[i, np.int_(t2df[beamcols].iloc[i_nearby[i]].values)] = t2df[snrcols].iloc[i_nearby[i]].values
 
         # accumulate outer products. TODO: limit to near the event
         im = np.zeros((256, 256))
