@@ -11,6 +11,7 @@ mpl.rcdefaults()
 mpl.use('Agg') # hack
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import scipy.signal
+from scipy.ndimage.filters import gaussian_filter
 from scipy import stats
 import pandas
 from pandas.errors import EmptyDataError
@@ -86,8 +87,8 @@ def read_fil_data_dsa(fn, start=0, stop=1):
 
 
 def plotfour(dataft, datats, datadmt, 
-             beam_time_arr=None, figname=None, dm=0,
-             dms=[0,1], 
+             beam_time_arr=None, nsnr=10,
+             figname=None, dm=0, dms=[0,1], 
              datadm0=None, suptitle='', heimsnr=-1,
              ibox=1, ibeam=-1, prob=-1,
              showplot=True,multibeam_dm0ts=None,
@@ -125,7 +126,7 @@ def plotfour(dataft, datats, datadmt,
     if xminplot<0:
         xmaxplot=xminplot+500+300*ibox/16        
         xminplot=0
-#    xminplot,xmaxplot = 0, 1000.
+
     dm_min, dm_max = dms[0], dms[1]
     tmin, tmax = 0., 1e3*dataft.header['tsamp']*ntime
     freqmax = dataft.header['fch1']
@@ -168,13 +169,64 @@ def plotfour(dataft, datats, datadmt,
             \nHeimdall ibox : %d\nibeam : %d' % (heimsnr,dm,ibox,ibeam), 
             fontsize=8, verticalalignment='center')
     
-#    parent_axes=fig.add_subplot(324)
+    t2df = None
+    if fnT2clust is None:
+        try:
+            # first try to get one at event MJD
+            fnT2clust = f'{T2dir}/{int(imjd)}.csv'
+            t2df = get_T2object(fnT2clust)
+            print(f'Using specific T2 info in {fnT2clust}')
+        except:
+            # fall back to recent accumulation
+            fnT2clust = f'{T2dir}/cluster_output.csv'
+            print(f'Using recent T2 info in {fnT2clust}')
+            t2df = get_T2object(fnT2clust)
+    else:
+        t2df = get_T2object(fnT2clust)
+
     parent_axes = axs[1][1]
-    if beam_time_arr is None:
-        plt.xticks([])
-        plt.yticks([])
-        plt.text(0.20, 0.55, 'Multibeam info\n not available',
-                fontweight='bold')
+    if beam_time_arr is None and t2df is not None:
+        i_cand = np.where(np.round(imjd, 8) == np.round(t2df.mjds, 8))[0]
+        if len(i_cand) > 1:
+            print(f'multiple candidates at imjd={np.round(imjd, 8)}. Using first...')
+            i_cand = i_cand[0]
+        elif len(i_cand) == 1:
+            i_cand = i_cand[0]
+        else:
+            print(f'could not find T2 event at imjd={np.round(imjd, 8)}')
+            i_cand = -1
+
+        if i_cand >= 0:
+            # accumulate outer product over T2 events near candidate
+            i_nearby = np.where(np.abs(86400*(imjd-t2df.mjds[:]))<60.0)[0]
+
+            # create outer product image
+            snrs = np.zeros((len(i_nearby), 512))
+            beamcols = [f'beams{j}' for j in range(nsnr) if f'beams{j}' in t2df.columns]
+            snrcols = [f'snrs{j}' for j in range(nsnr) if f'snrs{j}' in t2df.columns]
+            for i in range(len(snrs)):
+                snrs[i, np.int_(t2df[beamcols].iloc[i_nearby[i]].values)] = t2df[snrcols].iloc[i_nearby[i]].values
+
+            # accumulate outer products. TODO: limit to near the event
+            im = np.zeros((256, 256))
+            for i in range(len(snrs)):
+                im += np.sqrt(np.multiply.outer(snrs[i, :256], snrs[i, 256:]))
+
+            im = gaussian_filter(im, 4)
+            # custom ticks to show beams/snrs of candidate
+            ticks = t2df[beamcols].iloc[i_cand].values
+            labels = t2df[snrcols].iloc[i_cand].values
+            xticks, xlabels = zip(*[(t, l) for (t,l) in zip(ticks, labels) if t < 256 and l > 0])
+            yticks, ylabels = zip(*[(t-256, l) for (t,l) in zip(ticks, labels) if t >= 256 and l > 0])
+
+            # plot
+            imshow = parent_axes.imshow(im.transpose(), cmap='magma', origin='lower', interpolation='nearest')
+            parent_axes.set_xlabel('E-W beam')
+            parent_axes.set_ylabel('N-S beam')
+            parent_axes.tick_params(direction='out', length=6, width=2, colors='k')
+            parent_axes.set_xticks(xticks, np.round(xlabels, 1))
+            parent_axes.set_yticks(yticks, np.round(ylabels, 1))
+            fig.colorbar(imshow, label="2-arm SNR (recently)", ax=axs[1][1])
     else:
         parent_axes.imshow(beam_time_arr[::-1], aspect='auto', extent=[tmin, tmax, 0, beam_time_arr.shape[0]], 
                   interpolation='nearest')
@@ -217,22 +269,20 @@ def plotfour(dataft, datats, datadmt,
             axs[2][0].legend(['DM=0 Timestream'], loc=2, fontsize=10)
         axs[2][0].set_xlabel('Time (ms)')
                 
-        if fnT2clust is not None:
-            T2object = get_T2object(fnT2clust)  # wrap with retry
-
-            ind = np.where(np.abs(86400*(imjd-T2object.mjds[:]))<30.0)[0]
-            ttsec = (T2object.mjds.values-imjd)*86400
+        if t2df is not None:
+            ind = np.where(np.abs(86400*(imjd-t2df.mjds[:]))<30.0)[0]
+            ttsec = (t2df.mjds.values-imjd)*86400
             mappable = axs[2][1].scatter(ttsec[ind],
-                                         T2object.ibeam[ind],
-                                         c=T2object.dm[ind],
-                                         s=2*T2object.snr[ind],
-                                         cmap='RdBu_r',
-                                         vmin=0,vmax=1200)
+                                         t2df.ibeam[ind],
+                                         c=t2df.dm[ind],
+                                         s=2*t2df.snr[ind],
+                                         cmap='viridis',
+                                         vmin=0)#,vmax=1200)
             fig.colorbar(mappable, label=r'DM (pc cm$^{-3}$)', ax=axs[2][1])
             axs[2][1].scatter(0, ibeam, s=100, marker='s',
                         facecolor='none', edgecolor='black')
             axs[2][1].set_xlim(-10,10.)
-            axs[2][1].set_ylim(0,256)
+            axs[2][1].set_ylim(0,512)
             axs[2][1].set_xlabel('Time (s)')
             axs[2][1].set_ylabel('ibeam')
 
@@ -571,7 +621,6 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
 
     if type(multibeam)==list:
         data_beam_freq_time = []
-        nbeam=256
         beam_time_arr_results = generate_beam_time_arr(multibeam, ibox=ibox, pre_rebin=1, dm=dm, heim_raw_tres=heim_raw_tres)
         data_beam_freq_time, _, beamno_arr = beam_time_arr_results
         beam_time_arr = data_beam_freq_time.mean(1)
@@ -625,8 +674,8 @@ def filplot(fn, dm, ibox, multibeam=None, figname=None,
 
 
 def filplot_entry(trigger_dict, toslack=True, classify=True,
-                  rficlean=False, ndm=32, nfreq_plot=32, save_data=True,
-                  fllisting=None):
+                  rficlean=False, ndm=32, nfreq_plot=32, save_data=False,
+                  fllisting=None, fnT2clust=None):
     """ Given datestring and trigger dictionary, run filterbank plotting, classifying, slack posting.
     Returns figure filename and classification probability. 
     
@@ -660,12 +709,12 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     trigname = trigger_dict['trigname']
     dm = trigger_dict['dm']
     ibox = trigger_dict['ibox']
-    ibeam = trigger_dict['ibeam'] + 1
+    ibeam = trigger_dict['ibeam']
     timehr = trigger_dict['mjds']
     snr = trigger_dict['snr']
     injected = trigger_dict['injected']
+    ibeam_prob = trigger_dict['ibeam_prob']
     
-    fnT2clust = f'{T2dir}/cluster_output.csv'
     fname = None
     if fllisting is None:
         flist = glob.glob(f"{os.path.join(T1dir, trigname)}/*.fil")
@@ -699,6 +748,10 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     figname = figdirout+trigname+'.png'
 
     assert fname is not None, "Must set fname"
+
+    # set flist to None for now VR
+    flist=None
+    
     not_real, prob = filplot(fname, dm, ibox, figname=figname,
                              ndm=ndm, suptitle=suptitle, heimsnr=snr,
                              ibeam=ibeam, rficlean=rficlean, 
@@ -709,10 +762,15 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     real = not not_real
 
     if toslack:
-        if not_real==False:
+        if real:
             print(f"Sending {figname} to slack")
             try:
-                slack_client.files_upload(channels='candidates', file=figname, initial_comment=figname)
+                # VR hack
+                #if ibeam_prob > 0.95 and ibox < 16 and snr > 13 and not (dm > 624 and dm < 628) and not injected:
+                #message = f"{os.path.basename(figname)} (VOEvent sent!)"
+                #else:
+                message = os.path.basename(figname)
+                slack_client.files_upload(channels='candidates', file=figname, initial_comment=message)
             except slack.errors.SlackApiError as exc:
                 print(f'SlackApiError!: {str(exc)}')
         else:
@@ -756,12 +814,11 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
     trigname = trigger_dict['trigname']
     dm = trigger_dict['dm']
     ibox = trigger_dict['ibox']
-    ibeam = trigger_dict['ibeam'] + 1
+    ibeam = trigger_dict['ibeam']
     timehr = trigger_dict['mjds']
     snr = trigger_dict['snr']
     injected = trigger_dict['injected']
     
-    fnT2clust = f'{T2dir}/cluster_output.csv'
     fname = None
     
     if fllisting is None:
@@ -801,7 +858,7 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
                              ibeam=ibeam, rficlean=rficlean, 
                              nfreq_plot=nfreq_plot, classify=classify, showplot=showplot, 
                              multibeam=None, heim_raw_tres=1, save_data=save_data,
-                             candname=trigname, fnT2clust=fnT2clust, imjd=timehr,
+                             candname=trigname, imjd=timehr,
                              injected=injected, fast_classify=True)
     print("Probability of fast classification: %0.2f" % prob)
     return prob

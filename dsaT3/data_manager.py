@@ -26,7 +26,7 @@ class DataManager:
         subband_corrnames = tuple(cnf.Conf().get('corr')['ch0'].keys())
     except:
         subband_corrnames = None
-    nbeams = 256
+    nbeams = 512
     voltage_dir = Path("/dataz/dsa110/T3")
 
     # Ensure read only since shared between instances

@@ -63,7 +63,7 @@ def run_filplot(d, wait=False, lock=None):
     LOGGER.info('running filplot on {0}'.format(d.trigname))
     d.writejson(outpath=OUTPUT_PATH, lock=lock)
 
-    ibeam = d.ibeam + 1
+    ibeam = d.ibeam
 
     # TODO: get this from the dict set by T2, not from the name
     if '_inj' in d.trigname:
@@ -96,15 +96,16 @@ def run_filplot(d, wait=False, lock=None):
     # launch plot and classify
     try:
         # Test fast classifier:
-        d.ibeam_prob = filf.filplot_entry_fast(asdict(d), toslack=False, classify=True,
-                                rficlean=False, ndm=1, nfreq_plot=32, save_data=False,
-                                fllisting=None)
-        
-        if d.ibeam_prob > 0.95 and d.ibox < 16 and d.snr > 13:
-            print('Running fast_response')
-            fast_response(d)
-        else:
-            print('Not running fast_response')
+        #d.ibeam_prob = filf.filplot_entry_fast(asdict(d), toslack=False, classify=True,
+        #                        rficlean=False, ndm=1, nfreq_plot=32, save_data=False,
+        #                        fllisting=None)
+
+        # assuming inj8 DMs are untrustworthy. inj10 is always found as too wide (ibox=16)
+        #if d.ibeam_prob > 0.95 and d.ibox < 16 and d.snr > 13 and not (d.dm > 624 and d.dm < 628):
+        #    print('Running fast_response')
+        #    fast_response(d)
+        #else:
+        #    print('Not running fast_response. Event is too wide/weak/low-ibeam_prob/injected-dm.')
 
         d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False, classify=True)
     except Exception as exception:
@@ -147,7 +148,7 @@ def fast_response(d):
 
     ret = 1
     if os.path.exists(infile):
-        ret = subprocess.run(['dsaevent', 'create-voevent', infile, outfile]).returncode
+        ret = subprocess.run(['dsaevent', 'create-voevent', infile, outfile, '--production']).returncode
         if not d.injected:
             dc.set('observation', args=asdict(d))
             if ret == 0:
@@ -379,7 +380,7 @@ def wait_for_local_file(fl, timeout, allbeams=False):
         loc = os.path.dirname(fl)
         fl0 = os.path.basename(fl.rstrip('.fil'))
         fl1 = "_".join(fl0.split("_")[:-1])
-        fl = [f"{os.path.join(loc, fl1 + '_' + str(i) + '.fil')}" for i in range(256)]
+        fl = [f"{os.path.join(loc, fl1 + '_' + str(i) + '.fil')}" for i in range(512)]
     
     if isinstance(fl, str):
         fl = [fl]
