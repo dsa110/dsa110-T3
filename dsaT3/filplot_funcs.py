@@ -803,12 +803,8 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
         
     Returns
     -------
-    fnameout : str 
-        figure file path
     prob : float 
         probability from dynamic spectrum CNN
-    real : bool
-        real event, as determined by classfication 
     """
     
     trigname = trigger_dict['trigname']
@@ -829,7 +825,11 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
         flist = fllisting
 
 #    fname = T1dir + '/' +  trigname + '_%d.fil'%ibeam
-    fname = fllisting[ibeam]
+    try:
+        fname = fllisting[ibeam]
+    except IndexError:
+        print(f'Could not get fil file for {trigname} at beam {ibeam}')
+        return -1
 
     if toslack:
         showplot = False
