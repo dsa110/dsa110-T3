@@ -27,17 +27,18 @@ def check_voltages(candname):
     assert os.path.exists(filename), f'candidate json file {filename} not found'
     dd = readfile(filename)
     
-    corrs = ['corr03','corr04','corr05','corr06','corr07','corr08','corr10','corr11','corr12','corr14','corr15','corr16','corr18','corr19','corr21','corr22']
-
+    #corrs = ['corr03','corr04','corr05','corr06','corr07','corr08','corr10','corr11','corr12','corr14','corr15','corr16','corr18','corr19','corr21','corr22']
+    corrs = ['h03','h04','h05','h06','hh07','h08','h10','h11','h12','h14','h15','h16','h18','h19','h21','h22']
+    
     # edit corr03_data and corr03_header
     for corr in corrs:
 
         data_file = '/home/ubuntu/data/'+candname+'_data.out'
         header_file = '/home/ubuntu/data/'+candname+'_header.json'
-        if exists_remote(corr+'.sas.pvt',data_file):
+        if exists_remote(corr+'.pro.pvt',data_file):
             dd[corr+'_data'] = True
             print('Found data:',corr)
-        if exists_remote(corr+'.sas.pvt',header_file):
+        if exists_remote(corr+'.pro.pvt',header_file):
             dd[corr+'_header'] = True
             print('Found header:',corr)
 
@@ -66,15 +67,16 @@ def archive(datestring, T3root='/media/ubuntu/data/dsa110/T3/'):
 
             saved_trigname.append(de['trigname'])
 
-            for corr in ['corr03', 'corr04', 'corr05', 'corr06', 'corr07', 'corr08', 'corr10', 'corr11', 'corr12', 'corr14', 'corr15', 'corr16', 'corr18', 'corr19', 'corr21', 'corr22']:
+            for corr in ['h03','h04','h05','h06','hh07','h08','h10','h11','h12','h14','h15','h16','h18','h19','h21','h22']:
+            #['corr03', 'corr04', 'corr05', 'corr06', 'corr07', 'corr08', 'corr10', 'corr11', 'corr12', 'corr14', 'corr15', 'corr16', 'corr18', 'corr19', 'corr21', 'corr22']:
                 
                 outfile_h = T3root + datestring + '/'+corr+'_'+de['trigname']+'_header.json'
-                infile_h = corr+'.sas.pvt:/home/ubuntu/data/'+de['trigname']+'_header.json'
+                infile_h = corr+'.pro.pvt:/home/ubuntu/data/'+de['trigname']+'_header.json'
                 outfile_d = T3root + datestring + '/'+corr+'_'+de['trigname']+'_data.out'
-                infile_d = corr+'.sas.pvt:/home/ubuntu/data/'+de['trigname']+'_data.out'
+                infile_d = corr+'.pro.pvt:/home/ubuntu/data/'+de['trigname']+'_data.out'
 
                 print('Searching for remote file '+'/home/ubuntu/data/'+de['trigname']+'_data.out')
-                if exists_remote(corr+'.sas.pvt','/home/ubuntu/data/'+de['trigname']+'_data.out'):
+                if exists_remote(corr+'.pro.pvt','/home/ubuntu/data/'+de['trigname']+'_data.out'):
                     if not os.path.exists(outfile_h):
                         rsync_file(infile_h,outfile_h)
                     if not os.path.exists(outfile_d):

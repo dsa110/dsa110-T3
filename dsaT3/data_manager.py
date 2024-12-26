@@ -23,7 +23,8 @@ class DataManager:
     candidates_subdirs = (
         "Level3", "Level2/voltages", "Level2/filterbank", "Level2/calibration", "other")
     try:
-        subband_corrnames = tuple(cnf.Conf().get('corr')['ch0'].keys())
+        #subband_corrnames = tuple(cnf.Conf().get('corr')['ch0'].keys())
+        subband_corrnames = ("h03","h04","h05","h06","hh07","h08","h09","h10","h11","h12","h14","h15","h16","h18","h19","h21","h22")
     except:
         subband_corrnames = None
     nbeams = 512
@@ -34,14 +35,14 @@ class DataManager:
         'voltages':
             {
                 'target': "{voltage_dir}/{hostname}/{candname}_data.out",
-                'target_scp': "ubuntu@{hostname}.sas.pvt:/home/ubuntu/data/{candname}_data.out",
+                'target_scp': "ubuntu@{hostname}.pro.pvt:/home/ubuntu/data/{candname}_data.out",
                 'destination': (
                     "{candidates_dir}/{candname}/Level2/voltages/{candname}_{subband}_data.out"),
             },
         'voltages_headers':
             {
                 'target': "{voltage_dir}/{hostname}/{candname}_header.json",
-                'target_scp': "ubuntu@{hostname}.sas.pvt:/home/ubuntu/data/{candname}_header.json",
+                'target_scp': "ubuntu@{hostname}.pro.pvt:/home/ubuntu/data/{candname}_header.json",
                 'destination': (
                     "{candidates_dir}/{candname}/Level2/voltages/{candname}_{subband}_header.json"),
             },

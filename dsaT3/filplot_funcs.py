@@ -216,13 +216,24 @@ def plotfour(dataft, datats, datadmt,
             # custom ticks to show beams/snrs of candidate
             ticks = t2df[beamcols].iloc[i_cand].values
             labels = t2df[snrcols].iloc[i_cand].values
-            xticks, xlabels = zip(*[(t, l) for (t,l) in zip(ticks, labels) if t < 256 and l > 0])
-            yticks, ylabels = zip(*[(t-256, l) for (t,l) in zip(ticks, labels) if t >= 256 and l > 0])
+            valid_xticks = [(t, l) for (t, l) in zip(ticks, labels) if t < 256 and l > 0]
+            valid_yticks = [(t-256, l) for (t, l) in zip(ticks, labels) if t >= 256 and l > 0]
 
+            if len(valid_xticks) > 0:
+                xticks, xlabels = zip(*valid_xticks)
+            else:
+                # Provide defaults or skip setting them
+                xticks, xlabels = [],[]
+
+            if len(valid_yticks) > 0:
+                yticks, ylabels = zip(*valid_yticks)
+            else:
+                yticks, ylabels = [],[]
+                
             # plot
             imshow = parent_axes.imshow(im.transpose(), cmap='magma', origin='lower', interpolation='nearest')
             parent_axes.set_xlabel('E-W beam')
-            parent_axes.set_ylabel('N-S beam')
+            parent_axes.set_ylabel('N-S beam test')
             parent_axes.tick_params(direction='out', length=6, width=2, colors='k')
             parent_axes.set_xticks(xticks, np.round(xlabels, 1))
             parent_axes.set_yticks(yticks, np.round(ylabels, 1))
@@ -338,6 +349,8 @@ def dm_transform(data, dm_max=20,
         dm_max_jj = np.argmin(abs(dms-dm0))
         dms += (dm0-dms[dm_max_jj])
 
+    downsample = max(downsample, 1)
+        
     data_full = np.zeros([ndm, ntime//downsample])
 
     for ii, dm in enumerate(dms):
