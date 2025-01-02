@@ -2,6 +2,7 @@
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
+import os
 import re
 import shutil
 import subprocess
@@ -480,9 +481,14 @@ class DataManager:
             return
 
         if remote:
-            subprocess.check_output(
-                f"scp {sourcepath} {destpath}", shell=True, stderr=subprocess.STDOUT)
+            print(f"Running scp {sourcepath} {destpath}")
+            self.logger.info(f"Running scp {sourcepath} {destpath}")
+            #subprocess.check_output(
+            #    f"scp {sourcepath} {destpath}", shell=True, stderr=subprocess.STDOUT)
+            os.system(f"scp {sourcepath} {destpath}")
         else:
+            print("Running COPY {sourcepath} {destpath}")
+            self.logger.info("Running COPY {sourcepath} {destpath}")
             shutil.copy(str(sourcepath), str(destpath))
 
         self.logger.info(f"Copied {sourcepath} to {destpath}.")
