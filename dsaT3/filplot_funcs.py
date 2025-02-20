@@ -776,7 +776,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     real = not not_real
 
     if toslack:
-        if real:
+        if real and not injected:
             print(f"Sending {figname} to slack")
             try:
                 # VR hack
@@ -787,8 +787,14 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
                 slack_client.files_upload(channels='candidates', file=figname, initial_comment=message)
             except slack.errors.SlackApiError as exc:
                 print(f'SlackApiError!: {str(exc)}')
+        elif not real and not injected:
+            print(f"Not real (prob={prob}). Not sending {figname} to slack")
+        elif not real and injected:
+            print(f"Injection not classified as real (prob={prob}). Not sending {figname} to slack.")
+        elif real and injected:
+            slack_client.chat_postMessage(channel='candidates', text='Injection detected as {trigname} with DM={dm} and SNR={snr}.')
         else:
-            print(f"Not real. Not sending {figname} to slack", prob)
+            print("This should not happen")
 
     return figname, prob, real
 
