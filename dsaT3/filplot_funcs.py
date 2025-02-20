@@ -573,6 +573,8 @@ def generate_beam_time_arr(fl, ibeam=0, pre_rebin=1,
         data = data.downsample(pre_rebin)
         data = data.dedisperse(dm)
         data = data.downsample(heim_raw_tres*ibox//pre_rebin)
+        print("Liam Hack")
+        np.save('datafil_%d.npy' % jj, data)
         datats = np.mean(data, axis=0)
 
         # Low resolution nbeam, nfreq, ntime array
@@ -742,6 +744,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     else:
         flist = fllisting
 
+    print(flist)
 #    fname = T1dir + '/' +  trigname + '_%d.fil'%ibeam
     fname = fllisting[ibeam]
 

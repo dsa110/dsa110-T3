@@ -25,7 +25,7 @@ class DataManager:
         "Level3", "Level2/voltages", "Level2/filterbank", "Level2/calibration", "other")
     try:
         #subband_corrnames = tuple(cnf.Conf().get('corr')['ch0'].keys())
-        subband_corrnames = ("h03","h04","h05","h06","hh07","h08","h09","h10","h11","h12","h14","h15","h16","h18","h19","h21","h22")
+        subband_corrnames = ("h03","hh04","h05","h06","hh07","h08","h09","hh10","h11","hh12","h14","h15","h16","h18","h19","h21","h22")
     except:
         subband_corrnames = None
     nbeams = 512
