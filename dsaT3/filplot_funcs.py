@@ -216,9 +216,20 @@ def plotfour(dataft, datats, datadmt,
             # custom ticks to show beams/snrs of candidate
             ticks = t2df[beamcols].iloc[i_cand].values
             labels = t2df[snrcols].iloc[i_cand].values
-            xticks, xlabels = zip(*[(t, l) for (t,l) in zip(ticks, labels) if t < 256 and l > 0])
-            yticks, ylabels = zip(*[(t-256, l) for (t,l) in zip(ticks, labels) if t >= 256 and l > 0])
 
+            xticks, xlabels = [],[]
+            yticks, ylabels = [],[]
+            
+            try:
+                valid_xticks = [(t, l) for (t, l) in zip(ticks, labels) if t < 256 and l > 0]
+                valid_yticks = [(t-256, l) for (t, l) in zip(ticks, labels) if t >= 256 and l > 0]
+                if len(valid_xticks) > 0:
+                    xticks, xlabels = zip(*valid_xticks)
+                if len(valid_yticks) > 0:
+                    yticks, ylabels = zip(*valid_yticks)
+            except:
+                pass
+                
             # plot
             imshow = parent_axes.imshow(im.transpose(), cmap='magma', origin='lower', interpolation='nearest')
             parent_axes.set_xlabel('E-W beam')
@@ -272,15 +283,19 @@ def plotfour(dataft, datats, datadmt,
         if t2df is not None:
             ind = np.where(np.abs(86400*(imjd-t2df.mjds[:]))<30.0)[0]
             ttsec = (t2df.mjds.values-imjd)*86400
-            mappable = axs[2][1].scatter(ttsec[ind],
-                                         t2df.ibeam[ind],
-                                         c=t2df.dm[ind],
-                                         s=2*t2df.snr[ind],
-                                         cmap='viridis',
-                                         vmin=0)#,vmax=1200)
-            fig.colorbar(mappable, label=r'DM (pc cm$^{-3}$)', ax=axs[2][1])
-            axs[2][1].scatter(0, ibeam, s=100, marker='s',
-                        facecolor='none', edgecolor='black')
+            #print(ind,ttsec,ttsec[ind],t2df.ibeam[ind],t2df.dm[ind],t2df.snr[ind])
+            try:
+                mappable = axs[2][1].scatter(ttsec[ind],
+                                             t2df.ibeam[ind],
+                                             c=t2df.dm[ind],
+                                             s=2*t2df.snr[ind],
+                                             cmap='viridis',
+                                             vmin=0)#,vmax=1200)
+                fig.colorbar(mappable, label=r'DM (pc cm$^{-3}$)', ax=axs[2][1])
+                axs[2][1].scatter(0, ibeam, s=100, marker='s',
+                                  facecolor='none', edgecolor='black')
+            except:
+                print("Cannot plot T2 map")
             axs[2][1].set_xlim(-10,10.)
             axs[2][1].set_ylim(0,512)
             axs[2][1].set_xlabel('Time (s)')
@@ -338,6 +353,8 @@ def dm_transform(data, dm_max=20,
         dm_max_jj = np.argmin(abs(dms-dm0))
         dms += (dm0-dms[dm_max_jj])
 
+    downsample = max(downsample, 1)
+        
     data_full = np.zeros([ndm, ntime//downsample])
 
     for ii, dm in enumerate(dms):
@@ -556,6 +573,8 @@ def generate_beam_time_arr(fl, ibeam=0, pre_rebin=1,
         data = data.downsample(pre_rebin)
         data = data.dedisperse(dm)
         data = data.downsample(heim_raw_tres*ibox//pre_rebin)
+        print("Liam Hack")
+        np.save('datafil_%d.npy' % jj, data)
         datats = np.mean(data, axis=0)
 
         # Low resolution nbeam, nfreq, ntime array
@@ -714,6 +733,8 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     snr = trigger_dict['snr']
     injected = trigger_dict['injected']
     ibeam_prob = trigger_dict['ibeam_prob']
+    ra = trigger_dict['ra']
+    dec = trigger_dict['dec']
     
     fname = None
     if fllisting is None:
@@ -723,6 +744,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     else:
         flist = fllisting
 
+    print(flist)
 #    fname = T1dir + '/' +  trigname + '_%d.fil'%ibeam
     fname = fllisting[ibeam]
 
@@ -731,17 +753,9 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     else:
         showplot = True
 
-    # VR hack
-    try:
-        ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(ibeam, obstime=Time(timehr, format='mjd'))
-        l, b = dsautils.coordinates.get_galcoord(ra_mjd.value, dec_mjd.value)
-    except:
-        ra_mjd = 1.0*u.deg
-        dec_mjd = 71.5*u.deg
-        l = 100.0
-        b = 50.0
+    l, b = dsautils.coordinates.get_galcoord(ra, dec)
 
-    outstr = (trigname, dm, int(ibox), int(ibeam), timehr, ra_mjd.value, dec_mjd.value, l, b)
+    outstr = (trigname, dm, int(ibox), int(ibeam), timehr, ra, dec, l, b)
     suptitle = 'candname:%s  DM:%0.1f  boxcar:%d \nibeam:%d MJD:%f \nRa/Dec=%0.1f,%0.1f Gal lon/lat=%0.1f,%0.1f' % outstr
 
     figdirout = webPLOTDIR
@@ -762,7 +776,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
     real = not not_real
 
     if toslack:
-        if real:
+        if real and not injected:
             print(f"Sending {figname} to slack")
             try:
                 # VR hack
@@ -773,8 +787,14 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
                 slack_client.files_upload(channels='candidates', file=figname, initial_comment=message)
             except slack.errors.SlackApiError as exc:
                 print(f'SlackApiError!: {str(exc)}')
+        elif not real and not injected:
+            print(f"Not real (prob={prob}). Not sending {figname} to slack")
+        elif not real and injected:
+            print(f"Injection not classified as real (prob={prob}). Not sending {figname} to slack.")
+        elif real and injected:
+            slack_client.chat_postMessage(channel='candidates', text=f'Injection detected as {trigname} with DM={dm} and SNR={snr}.')
         else:
-            print(f"Not real. Not sending {figname} to slack", prob)
+            print("This should not happen")
 
     return figname, prob, real
 
@@ -803,12 +823,8 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
         
     Returns
     -------
-    fnameout : str 
-        figure file path
     prob : float 
         probability from dynamic spectrum CNN
-    real : bool
-        real event, as determined by classfication 
     """
     
     trigname = trigger_dict['trigname']
@@ -818,6 +834,8 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
     timehr = trigger_dict['mjds']
     snr = trigger_dict['snr']
     injected = trigger_dict['injected']
+    ra = trigger_dict['ra']
+    dec = trigger_dict['dec']
     
     fname = None
     
@@ -829,24 +847,20 @@ def filplot_entry_fast(trigger_dict, toslack=False, classify=True,
         flist = fllisting
 
 #    fname = T1dir + '/' +  trigname + '_%d.fil'%ibeam
-    fname = fllisting[ibeam]
+    try:
+        fname = fllisting[ibeam]
+    except IndexError:
+        print(f'Could not get fil file for {trigname} at beam {ibeam}')
+        return -1
 
     if toslack:
         showplot = False
     else:
         showplot = True
 
-    # VR hack
-    try:
-        ra_mjd, dec_mjd = dsautils.coordinates.get_pointing(ibeam, obstime=Time(timehr, format='mjd'))
-        l, b = dsautils.coordinates.get_galcoord(ra_mjd.value, dec_mjd.value)
-    except:
-        ra_mjd = 1.0*u.deg
-        dec_mjd = 71.5*u.deg
-        l = 100.0
-        b = 50.0
+    l, b = dsautils.coordinates.get_galcoord(ra, dec)
 
-    outstr = (trigname, dm, int(ibox), int(ibeam), timehr, ra_mjd.value, dec_mjd.value, l, b)
+    outstr = (trigname, dm, int(ibox), int(ibeam), timehr, ra, dec, l, b)
     suptitle = 'candname:%s  DM:%0.1f  boxcar:%d \nibeam:%d MJD:%f \nRa/Dec=%0.1f,%0.1f Gal lon/lat=%0.1f,%0.1f' % outstr
 
     figdirout = webPLOTDIR
