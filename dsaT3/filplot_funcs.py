@@ -792,7 +792,7 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
         elif not real and injected:
             print(f"Injection not classified as real (prob={prob}). Not sending {figname} to slack.")
         elif real and injected:
-            slack_client.chat_postMessage(channel='candidates', text='Injection detected as {trigname} with DM={dm} and SNR={snr}.')
+            slack_client.chat_postMessage(channel='candidates', text=f'Injection detected as {trigname} with DM={dm} and SNR={snr}.')
         else:
             print("This should not happen")
 
