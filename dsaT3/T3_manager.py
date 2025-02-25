@@ -108,6 +108,12 @@ def run_filplot(d, wait=False, lock=None):
         #    print('Not running fast_response. Event is too wide/weak/low-ibeam_prob/injected-dm.')
 
         d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False, classify=True)
+        if d.probability > 0.95 and d.ibox < 16 and d.snr > 13 and d.real:
+            print("Running fast_response")
+            fast_response(d)
+        else:
+            print('Not running fast_response. Event is too wide/weak/low-ibeam_prob')
+
     except Exception as exception:
         logging_string = "Could not make filplot {0} due to {1}.  Callback:\n{2}".format(
             d.trigname,
