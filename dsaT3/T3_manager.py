@@ -101,7 +101,7 @@ def run_filplot(d, wait=False, lock=None):
         #                        fllisting=None)
 
         d.candplot, d.probability, d.real = filf.filplot_entry(asdict(d), rficlean=False, classify=True)
-        if d.probability > 0.95 and d.ibox < 16 and d.snr > 11 and d.real and d.beams0 % 256 != d.beams1 % 256:
+        if d.probability > 0.95 and d.ibox < 16 and d.snr > 11 and not d.injected and (d.beams0 % 256 != d.beams1 % 256):
             # all injections lie on ns beam = ew beam (mod 256), so we are suspicious of those
             print("Running fast_response")
             fast_response(d)
