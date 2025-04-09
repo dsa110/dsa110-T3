@@ -154,6 +154,7 @@ def fast_response(d):
             if ret == 0:
                 print(f"Non-injection VOEvent created. Sending {outfile}...")
                 ret = subprocess.run(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile]).returncode
+                filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending VOEvent {outfile}...')
             else:
                 print(f"Non-injection event, but VOEvent {outfile} not created...")
         else:
