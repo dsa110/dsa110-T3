@@ -9,14 +9,14 @@ subdirs_to_clear = [
     ("T1/beams", "*.dat"),
     ("T1", "*/*.fil"),
     ("T1", "2*"),
-    ("T2/cluster_output", "*.cand"),
-    ("T2/cluster_output", "*.json"),
-    ("T2/cluster_output", "*.csv"),
-    ("T3", "*.png"),
-    ("T3", "*.json"),
+#    ("T2/cluster_output", "*.cand"),
+#    ("T2/cluster_output", "*.json"),
+#    ("T2/cluster_output", "*.csv"),
+#    ("T3", "*.png"),
+#    ("T3", "*.json"),
 ]
 
-cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=0.5)
+cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=2.5)
 print(
     f"Removing operation files last modified prior to "
     f"{cutoff.strftime('%Y-%m-%dT%H:%M:%S')} UTC")
