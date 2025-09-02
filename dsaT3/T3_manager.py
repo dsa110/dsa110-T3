@@ -152,9 +152,12 @@ def fast_response(d):
         if not d.injected:
             dc.set('observation', args=asdict(d))
             if ret == 0:
-                print(f"Non-injection VOEvent created. Sending {outfile}...")
-                ret = subprocess.run(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile]).returncode
-                filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending VOEvent {outfile}...')
+                print(f"Non-injection VOEvent created, but NOT sending {outfile}...")
+                filf.slack_client.chat_postMessage(channel='candidates', text=f'NOT sending VOEvent {outfile}...')
+# commented out for testing                
+#                print(f"Non-injection VOEvent created. Sending {outfile}...")
+#                ret = subprocess.run(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile]).returncode
+#                filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending VOEvent {outfile}...')
             else:
                 print(f"Non-injection event, but VOEvent {outfile} not created...")
         else:

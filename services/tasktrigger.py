@@ -27,6 +27,7 @@ while True:
             d = event.create_event(fl)
         except json.JSONDecodeError:
             print(f'{fl} could not be parsed into an event. skipping...')
+            continue
 
         if d.trigname not in candnames:
             fut = T3_manager.submit_cand(fl)
