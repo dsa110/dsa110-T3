@@ -150,7 +150,10 @@ def fast_response(d):
     if os.path.exists(infile):
         ret = subprocess.run(['dsaevent', 'create-voevent', infile, outfile, '--production']).returncode
         if not d.injected:
-            dc.set('observation', args=asdict(d))
+            try:
+                dc.set('observation', args=asdict(d))
+            except:
+                print('Failed to connect to ovro_alert client. Skipping...')
             if ret == 0:
                 print(f"Non-injection VOEvent created, but NOT sending {outfile}...")
                 filf.slack_client.chat_postMessage(channel='candidates', text=f'NOT sending VOEvent {outfile}...')
@@ -161,7 +164,10 @@ def fast_response(d):
             else:
                 print(f"Non-injection event, but VOEvent {outfile} not created...")
         else:
-            dc.set('test', args=asdict(d))
+            try:
+                dc.set('test', args=asdict(d))
+            except:
+                print('Failed to connect to ovro_alert client. Skipping...')
     else:
         print(f"Could not find {infile}, so no {outfile} made or event sent.")
 
