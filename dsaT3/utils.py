@@ -28,7 +28,7 @@ def check_voltages(candname):
     dd = readfile(filename)
     
     #corrs = ['corr03','corr04','corr05','corr06','corr07','corr08','corr10','corr11','corr12','corr14','corr15','corr16','corr18','corr19','corr21','corr22']
-    corrs = ['h03','hh04','h05','h06','hh07','h08','hh10','h11','hh12','h14','h15','h16','h18','h19','h21','h22']
+    corrs = ['h03','hh04','h05','h06','hh07','h08','hhh10','h11','hh12','h14','h15','h16','h18','h19','h21','h22']
     
     # edit corr03_data and corr03_header
     for corr in corrs:
@@ -67,7 +67,7 @@ def archive(datestring, T3root='/media/ubuntu/data/dsa110/T3/'):
 
             saved_trigname.append(de['trigname'])
 
-            for corr in ['h03','hh04','h05','h06','hh07','h08','hh10','h11','hh12','h14','h15','h16','h18','h19','h21','h22']:
+            for corr in ['h03','hh04','h05','h06','hh07','h08','hhh10','h11','hh12','h14','h15','h16','h18','h19','h21','h22']:
             #['corr03', 'corr04', 'corr05', 'corr06', 'corr07', 'corr08', 'corr10', 'corr11', 'corr12', 'corr14', 'corr15', 'corr16', 'corr18', 'corr19', 'corr21', 'corr22']:
                 
                 outfile_h = T3root + datestring + '/'+corr+'_'+de['trigname']+'_header.json'

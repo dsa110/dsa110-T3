@@ -15,7 +15,7 @@ from dsaT3 import data_manager
 from ovro_alert import alert_client
 
 
-client = Client('10.42.0.232:8786')
+client = Client('10.41.0.5:8786')
 LOCK = Lock('update_json')
 ds = dsa_store.DsaStore()
 LOGGER = dsl.DsaSyslogger()
