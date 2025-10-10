@@ -6,7 +6,7 @@ from dsautils import dsa_functions36
 from event import event
 from dask.distributed import Client
 
-cl = Client('10.41.0.5:8786')
+cl = Client('10.42.0.232:8786')
 de = dsa_store.DsaStore()
 
 # work through candidates as they are written to disk
