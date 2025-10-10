@@ -156,7 +156,10 @@ def fast_response(d):
                 print('Failed to connect to ovro_alert client. Skipping...')
             if ret == 0:
                 print(f"Non-injection VOEvent created, but NOT sending {outfile}...")
-                filf.slack_client.chat_postMessage(channel='candidates', text=f'NOT sending VOEvent {outfile}...')
+                filf.slack_client.chat_postMessage(channel='candidates', text=f'NOT sending GCN for {infile}...')
+# to be used in py310t3 environment
+#                ret = subprocess.run(['dsaevent', 'gcn-send', infile]).returncode
+
 # commented out for testing                
 #                print(f"Non-injection VOEvent created. Sending {outfile}...")
 #                ret = subprocess.run(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile]).returncode
