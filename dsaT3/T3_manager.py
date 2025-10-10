@@ -5,7 +5,7 @@ import subprocess
 import time, os
 import json
 from dataclasses import asdict
-from dask.distributed import Client, Lock
+from dask.distributed import get_client, Lock
 
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
@@ -14,8 +14,6 @@ from dsaT3 import filplot_funcs as filf
 from dsaT3 import data_manager
 from ovro_alert import alert_client
 
-
-client = Client('10.42.0.232:8786')
 LOCK = Lock('update_json')
 ds = dsa_store.DsaStore()
 LOGGER = dsl.DsaSyslogger()
@@ -29,9 +27,12 @@ FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
 IP_GUANO = '3.13.26.235'
 
-def submit_cand(fl, lock=LOCK):
+def submit_cand(fl, lock=LOCK, client=None):
     """ Given filename of trigger json, create DSACand and submit to scheduler for T3 processing.
     """
+
+    if client is None:
+        client = get_client()
 
     d = event.create_event(fl)
     print(f"Submitting task for trigname {d.trigname}")
