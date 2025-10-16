@@ -1,0 +1,25 @@
+# systemd unit file for calibration preprocessing service
+
+[Unit]
+
+Description=Dask scheduler
+
+[Service]
+
+# Command to execute when service started
+ExecStart=/home/ubuntu/anaconda3/envs/py310t3/bin/dask scheduler --host 10.42.0.232
+#ExecStart=/home/ubuntu/anaconda3/envs/casa38/bin/dask-scheduler
+ExecStop=/bin/true
+
+# Prevent python buffering; write to syslog
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/ubuntu/.config/systemd/user/environment.conf
+#Environment=PATH="/home/ubuntu/anaconda3/envs/py310t3/bin:/home/ubuntu/anaconda3/condabin:%(ENV_PATH)s"
+
+# Restart service on failure
+#Restart=on-failure
+
+[Install]
+
+# Automatically start service on boot
+WantedBy=default.target
