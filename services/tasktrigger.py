@@ -3,7 +3,7 @@ from dsautils import dsa_store
 import glob, os, json
 from dsautils import dsa_functions36
 from event import event
-from dask.distributed import get_client, LocalCluster #, Client
+from dask.distributed import LocalCluster
 import dask.config
 from dsaT3 import T3_manager
 
@@ -14,7 +14,7 @@ de = dsa_store.DsaStore()
 
 if __name__ == "__main__":
     with dask.config.set({"distributed.worker.resources.MEMORY": 10e9}):
-        cluster = LocalCluster(n_workers=3, threads_per_worker=3)
+        cluster = LocalCluster(name='t3', n_workers=3, threads_per_worker=3)
     client = cluster.get_client()
     # work through candidates as they are written to disk
     tasks = []

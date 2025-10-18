@@ -5,7 +5,7 @@ import subprocess
 import time, os
 import json
 from dataclasses import asdict
-from dask.distributed import get_client, Lock
+from dask.distributed import get_client, LocalCluster, Lock
 
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
@@ -32,7 +32,8 @@ def submit_cand(fl, lock=LOCK, client=None):
     """
 
     if client is None:
-        client = get_client()
+        cluster = LocalCluster(name='t3')
+        client = cluster.get_client()
 
     d = event.create_event(fl)
     print(f"Submitting task for trigname {d.trigname}")
