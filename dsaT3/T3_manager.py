@@ -5,7 +5,7 @@ import subprocess
 import time, os
 import json
 from dataclasses import asdict
-from dask.distributed import get_client, LocalCluster, Lock
+from dask.distributed import Client, LocalCluster, Lock
 
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
@@ -32,8 +32,13 @@ def submit_cand(fl, lock=LOCK, client=None):
     """
 
     if client is None:
-        cluster = LocalCluster(name='t3')
-        client = cluster.get_client()
+        if os.path.exists('/home/ubuntu/dask_scheduler.json'):
+            with open('/home/ubuntu/dask_scheduler.json', 'r') as f:
+                config = json.load(f)
+                client = Client(config['address'])
+        else:
+            cluster = LocalCluster()
+            client = cluster.get_client()
 
     d = event.create_event(fl)
     print(f"Submitting task for trigname {d.trigname}")

@@ -14,8 +14,12 @@ de = dsa_store.DsaStore()
 
 if __name__ == "__main__":
     with dask.config.set({"distributed.worker.resources.MEMORY": 10e9}):
-        cluster = LocalCluster(name='t3', n_workers=3, threads_per_worker=3)
+        cluster = LocalCluster(host='0.0.0.0', dashboard_address=':8787', n_workers=3, threads_per_worker=3)
     client = cluster.get_client()
+    print(f"Scheduler at {cluster.scheduler_address}")
+    with open('dask_scheduler.json', 'w') as f:
+        json.dump({'address': cluster.scheduler_address}, f)
+
     # work through candidates as they are written to disk
     tasks = []
 
