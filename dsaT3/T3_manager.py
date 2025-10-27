@@ -72,11 +72,11 @@ def run_filplot(d, wait=False, lock=None):
 
     ibeam = d.ibeam
 
-    # TODO: get this from the dict set by T2, not from the name
-    if '_inj' in d.trigname:
-        d.injected = True
-    else:
-        d.injected = False
+#    # This should be done in T2 already
+#    if '_inj' in d.trigname:
+#        d.injected = True
+#    else:
+#        d.injected = False
 
     if d.injected:
         print(f'Candidate {d.trigname} is an injection')
@@ -85,14 +85,14 @@ def run_filplot(d, wait=False, lock=None):
 
     filfile = f"{FILPATH}/{d.trigname}/{d.trigname}_{ibeam}.fil"
 
-    if wait:
+    if wait and not d.injected:  # don't wait for injections
         found_filfiles = wait_for_local_file(filfile, TIMEOUT_FIL, allbeams=True)
     else:
         found_filfiles = os.path.exists(filfile)
 
-    if found_filfiles:
+    if found_filfiles and not d.injected:
         d.filfile = filfile
-    else:
+    elif not found_filfiles and not d.injected:
         logging_string = 'Timeout while waiting for {0} filfiles'.format(d.trigname)
         logging_string += ' DM={0} ibox={1}'.format(d.dm, d.ibox)
         LOGGER.error(logging_string)
