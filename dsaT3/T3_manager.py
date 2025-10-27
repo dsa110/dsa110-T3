@@ -99,6 +99,8 @@ def run_filplot(d, wait=False, lock=None):
         filf.slack_client.chat_postMessage(channel='candidates', text=logging_string)
         d.candplot, d.probability, d.real = None, None, None
         return d
+    elif d.injected:
+        return d
 
     # launch plot and classify
     try:
