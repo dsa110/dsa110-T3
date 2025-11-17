@@ -161,22 +161,19 @@ def fast_response(d):
         if not d.injected:
             try:
                 dc.set('observation', args=asdict(d))
+                print('Sending observation alert to ovro-alert...')
             except:
                 print('Failed to connect to ovro_alert client. Skipping...')
-            if ret == 0:
-                filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending GCN for {infile}...')
-                ret = subprocess.run(['dsaevent', 'gcn-send', infile]).returncode
 
-# commented out for testing                
-#                print(f"Non-injection VOEvent created, but NOT sending {outfile}...")
-#                print(f"Non-injection VOEvent created. Sending {outfile}...")
-#                ret = subprocess.run(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile]).returncode
-#                filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending VOEvent {outfile}...')
-            else:
-                print(f"Non-injection event, but VOEvent {outfile} not created...")
+            print('Sending GCN...')
+            filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending GCN for {infile}...')
+            ret = subprocess.run(['dsaevent', 'gcn-send', infile]).returncode
+#            ret = subprocess.run(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile]).returncode
+#            filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending VOEvent {outfile}...')
         else:
             try:
                 dc.set('test', args=asdict(d))
+                print('Sending test alert to ovro-alert...')
             except:
                 print('Failed to connect to ovro_alert client. Skipping...')
     else:
