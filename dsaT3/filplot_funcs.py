@@ -784,8 +784,6 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
                 #message = f"{os.path.basename(figname)} (VOEvent sent!)"
                 #else:
                 message = os.path.basename(figname)
-                #slack_client.files_upload(channels='candidates', file=figname, initial_comment=message)
-                #vishnu changes for the new upload api
                 slack_client.files_upload_v2(channel=candidate_slack_channel_id, initial_comment=message,file_uploads=[
                     {
                         "file": figname,
