@@ -176,7 +176,7 @@ class DataManager:
                         self.copy_file(sourcepath_scp, destpath, remote=True)
                     except subprocess.CalledProcessError as exc:
                         self.logger.error(
-                            f"scp returned non-zero error code copying {sourcepath_scp} to "
+                            f"/usr/bin/scp returned non-zero error code copying {sourcepath_scp} to "
                             f"{destpath} with output: {exc}")
                     else:
                         found[subband] = True
@@ -226,7 +226,7 @@ class DataManager:
                         self.copy_file(sourcepath_scp, destpath, remote=True)
                     except subprocess.CalledProcessError as exc:
                         self.logger.error(
-                            f"scp returned non-zero error code copying {sourcepath_scp} to "
+                            f"/usr/bin/scp returned non-zero error code copying {sourcepath_scp} to "
                             f"{destpath} with output: {exc}")
                     else:
                         found[subband] = True
@@ -481,14 +481,14 @@ class DataManager:
             return
 
         if remote:
-            print(f"Running scp {sourcepath} {destpath}")
-            self.logger.info(f"Running scp {sourcepath} {destpath}")
+            print(f"Running /usr/bin/scp {sourcepath} {destpath}")
+            self.logger.info(f"Running /usr/bin/scp {sourcepath} {destpath}")
             #subprocess.check_output(
-            #    f"scp {sourcepath} {destpath}", shell=True, stderr=subprocess.STDOUT)
-            os.system(f"scp {sourcepath} {destpath}")
+            #    f"/usr/bin/scp {sourcepath} {destpath}", shell=True, stderr=subprocess.STDOUT)
+            os.system(f"/usr/bin/scp {sourcepath} {destpath}")
         else:
             print("Running COPY {sourcepath} {destpath}")
-            self.logger.info("Running COPY {sourcepath} {destpath}")
+            self.logger.info(f"Running COPY {sourcepath} {destpath}")
             shutil.copy(str(sourcepath), str(destpath))
 
         self.logger.info(f"Copied {sourcepath} to {destpath}.")

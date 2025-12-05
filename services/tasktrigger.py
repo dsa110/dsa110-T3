@@ -54,6 +54,10 @@ if __name__ == "__main__":
                         tasks.remove(future)
                     else:
                         print(f'\tTask {future} failed with status {future.status}')
+                        exc = future.exception()
+                        print(f'\tException: {exc}')
+                        tb = future.traceback()
+                        print("".join(tb.format()))
 
             de.put_dict('/mon/service/T3manager', {'cadence': 5, 'time': dsa_functions36.current_mjd()})
             sleep(5)

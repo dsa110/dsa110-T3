@@ -47,7 +47,7 @@ with open(slack_file) as sf_handler:
     slack_token = sf_handler.read()
     slack_client = slack.WebClient(token=slack_token)
 
-
+candidate_slack_channel_id = "C01NUV2M0HM"
 plt.rcParams.update({
                     'font.size': 12,
                     'font.family': 'serif',
@@ -784,7 +784,12 @@ def filplot_entry(trigger_dict, toslack=True, classify=True,
                 #message = f"{os.path.basename(figname)} (VOEvent sent!)"
                 #else:
                 message = os.path.basename(figname)
-                slack_client.files_upload(channels='candidates', file=figname, initial_comment=message)
+                slack_client.files_upload_v2(channel=candidate_slack_channel_id, initial_comment=message,file_uploads=[
+                    {
+                        "file": figname,
+                        "filename": message,
+                    }
+                ])
             except slack.errors.SlackApiError as exc:
                 print(f'SlackApiError!: {str(exc)}')
         elif not real and not injected:
