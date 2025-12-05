@@ -1,0 +1,25 @@
+# systemd unit file for calibration preprocessing service
+
+[Unit]
+
+Description=Dask worker
+
+[Service]
+
+# Command to execute when service started
+ExecStart=/home/ubuntu/anaconda3/envs/py310t3/bin/dask worker 10.42.0.232:8786 --memory-limit 60GB --nworkers 3 --nthreads 2 --resources "MEMORY=60e9"
+#ExecStart=/home/ubuntu/anaconda3/envs/casa38/bin/dask-worker 10.42.0.232:8786 --memory-limit 60GB --nworkers 3 --nthreads 2 --resources "MEMORY=60e9"
+ExecStop=/bin/true
+
+# Prevent python buffering; write to syslog
+Environment=PYTHONUNBUFFERED=1
+#EnvironmentFile=/home/ubuntu/.config/systemd/user/environment.conf
+#Environment=PATH="/home/ubuntu/anaconda3/envs/py310t3/bin:/home/ubuntu/anaconda3/condabin:%(ENV_PATH)s"
+
+# Restart service on failure
+#Restart=on-failure
+
+[Install]
+
+# Automatically start service on boot
+WantedBy=default.target

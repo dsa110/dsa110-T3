@@ -5,7 +5,7 @@ import subprocess
 import time, os
 import json
 from dataclasses import asdict
-from dask.distributed import Client, Lock
+from dask.distributed import Client, LocalCluster, Lock
 
 from dsautils import dsa_store
 import dsautils.dsa_syslog as dsl
@@ -14,8 +14,6 @@ from dsaT3 import filplot_funcs as filf
 from dsaT3 import data_manager
 from ovro_alert import alert_client
 
-
-client = Client('10.41.0.5:8786')
 LOCK = Lock('update_json')
 ds = dsa_store.DsaStore()
 LOGGER = dsl.DsaSyslogger()
@@ -29,9 +27,18 @@ FILPATH = '/dataz/dsa110/operations/T1/'
 OUTPUT_PATH = '/dataz/dsa110/operations/T3/'
 IP_GUANO = '3.13.26.235'
 
-def submit_cand(fl, lock=LOCK):
+def submit_cand(fl, lock=LOCK, client=None):
     """ Given filename of trigger json, create DSACand and submit to scheduler for T3 processing.
     """
+
+    if client is None:
+        if os.path.exists('/home/ubuntu/dask_scheduler.json'):
+            with open('/home/ubuntu/dask_scheduler.json', 'r') as f:
+                config = json.load(f)
+                client = Client(config['address'])
+        else:
+            cluster = LocalCluster()
+            client = cluster.get_client()
 
     d = event.create_event(fl)
     print(f"Submitting task for trigname {d.trigname}")
@@ -65,11 +72,11 @@ def run_filplot(d, wait=False, lock=None):
 
     ibeam = d.ibeam
 
-    # TODO: get this from the dict set by T2, not from the name
-    if '_inj' in d.trigname:
-        d.injected = True
-    else:
-        d.injected = False
+#    # This should be done in T2 already
+#    if '_inj' in d.trigname:
+#        d.injected = True
+#    else:
+#        d.injected = False
 
     if d.injected:
         print(f'Candidate {d.trigname} is an injection')
@@ -78,19 +85,21 @@ def run_filplot(d, wait=False, lock=None):
 
     filfile = f"{FILPATH}/{d.trigname}/{d.trigname}_{ibeam}.fil"
 
-    if wait:
+    if wait and not d.injected:  # don't wait for injections
         found_filfiles = wait_for_local_file(filfile, TIMEOUT_FIL, allbeams=True)
     else:
         found_filfiles = os.path.exists(filfile)
 
-    if found_filfiles:
+    if found_filfiles and not d.injected:
         d.filfile = filfile
-    else:
+    elif not found_filfiles and not d.injected:
         logging_string = 'Timeout while waiting for {0} filfiles'.format(d.trigname)
         logging_string += ' DM={0} ibox={1}'.format(d.dm, d.ibox)
         LOGGER.error(logging_string)
         filf.slack_client.chat_postMessage(channel='candidates', text=logging_string)
         d.candplot, d.probability, d.real = None, None, None
+        return d
+    elif d.injected:
         return d
 
     # launch plot and classify
@@ -152,20 +161,19 @@ def fast_response(d):
         if not d.injected:
             try:
                 dc.set('observation', args=asdict(d))
+                print('Sending observation alert to ovro-alert...')
             except:
                 print('Failed to connect to ovro_alert client. Skipping...')
-            if ret == 0:
-                print(f"Non-injection VOEvent created, but NOT sending {outfile}...")
-                filf.slack_client.chat_postMessage(channel='candidates', text=f'NOT sending VOEvent {outfile}...')
-# commented out for testing                
-#                print(f"Non-injection VOEvent created. Sending {outfile}...")
-#                ret = subprocess.run(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile]).returncode
-#                filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending VOEvent {outfile}...')
-            else:
-                print(f"Non-injection event, but VOEvent {outfile} not created...")
+
+            print('Sending GCN...')
+            filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending GCN for {infile}...')
+            ret = subprocess.run(['dsaevent', 'gcn-send', infile]).returncode
+#            ret = subprocess.run(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile]).returncode
+#            filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending VOEvent {outfile}...')
         else:
             try:
                 dc.set('test', args=asdict(d))
+                print('Sending test alert to ovro-alert...')
             except:
                 print('Failed to connect to ovro_alert client. Skipping...')
     else:
