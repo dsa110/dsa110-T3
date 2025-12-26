@@ -9,9 +9,9 @@ subdirs_to_clear = [
     ("T1/beams", "*.dat"),
     ("T1", "*/*.fil"),
     ("T1", "2*"),
-#    ("T2/cluster_output", "*.cand"),
-#    ("T2/cluster_output", "*.json"),
-#    ("T2/cluster_output", "*.csv"),
+    ("T2/cluster_output", "*.cand"),
+    ("T2/cluster_output", "*.json"),
+    ("T2/cluster_output", "*.csv"),
 #    ("T3", "*.png"),
 #    ("T3", "*.json"),
 ]

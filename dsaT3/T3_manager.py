@@ -165,9 +165,9 @@ def fast_response(d):
             except:
                 print('Failed to connect to ovro_alert client. Skipping...')
 
-            print('Sending GCN...')
-            filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending GCN for {infile}...')
-            ret = subprocess.run(['dsaevent', 'gcn-send', infile]).returncode
+            ret = subprocess.run(['dsaevent', 'gcn-send', '--env', 'prod', infile]).returncode
+            print(f'Sent GCN for {infile}...')
+            filf.slack_client.chat_postMessage(channel='candidates', text=f'Sent GCN for {infile}...')
 #            ret = subprocess.run(['dsaevent', 'send-voevent', '--destination', IP_GUANO, outfile]).returncode
 #            filf.slack_client.chat_postMessage(channel='candidates', text=f'Sending VOEvent {outfile}...')
         else:
